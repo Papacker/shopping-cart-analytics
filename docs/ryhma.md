@@ -1,4 +1,4 @@
-# Stressipallot
+# Laitetaan parastamme
 
 Ryhmän jäsenet
 
@@ -14,9 +14,9 @@ Ryhmän sisällä vaihtuu viikoittan Scrum menetelmän roolitukset.
 - Tuoteomistaja
 - Kehitystiimin jäsen
 
-| Viikko | Juhani | Suvi | Mikko | Jussi | Teo |
+| Viikko | Juhani | Teo | Mikko | Jussi | Suvi |
 |---|---|---|---|---|---|
-| VK1 | Scrummaster | Kehitystiimin jäsen | Kehitystiimin jäsen | Kehitystiimin jäsen | Tuoteomistaja |
+| VK1 | Scrummaster | Tuoteomistaja | Kehitystiimin jäsen | Kehitystiimin jäsen | Kehitystiimin jäsen |
 | VK2 | TBA | TBA | TBA | TBA | TBA |
 | VK3 | TBA | TBA | TBA | TBA | TBA |
 | VK4 | TBA | TBA | TBA | TBA | TBA |
