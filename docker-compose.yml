@@ -1,0 +1,42 @@
+services:
+  mariadb-server:
+    container_name: iiwari-mariadb-server
+    image: mariadb:latest
+    ports:
+      - 3308:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=d41k4Duu
+    volumes:
+      - vol-iiwari-mariadb-data:/var/lib/mysql
+    networks:
+      - iiwari-network
+
+  datascience-notebook:
+    image: jupyter/scipy-notebook:latest
+    container_name: jupyterlab2
+    volumes:
+      - ./src:/home/jovyan/work
+    ports:
+      - 8887:8888
+    environment:
+      - JUPYTER_TOKEN=daika
+      - GRANT_SUDO=yes
+      - JUPYTER_ENABLE_LAB=yes
+    networks:
+      - iiwari-network
+
+  toolset:
+    image: ubuntu:24.04
+    container_name: project-tools
+    volumes:
+      - ./src:/tools
+    networks:
+      - iiwari-network
+    command: sleep infinity
+
+networks:
+  iiwari-network:
+    external: false
+volumes:
+  vol-iiwari-mariadb-data:
+    external: false
