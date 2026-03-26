@@ -8,4 +8,5 @@ Tänne tulee pikaohje ja alustus projektin tekemiseen ja käytäntöihin.
 
 1. **Ensimmäinen vaihe:** 
 2. **Toinen vaihe:** 
-3. **Kolmas vaihe:** 
+3. **Kolmas vaihe:**
+4. **Neljäs vaihe:**
