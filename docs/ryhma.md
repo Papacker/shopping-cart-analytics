@@ -17,7 +17,7 @@ Ryhmän sisällä vaihtuu viikoittan Scrum menetelmän roolitukset.
 | Viikko | Juhani | Teo | Mikko | Jussi | Suvi |
 |---|---|---|---|---|---|
 | Sprint 1 | Scrummaster | Tuoteomistaja | Kehitystiimin jäsen | Kehitystiimin jäsen | Kehitystiimin jäsen |
-| Sprint 2 | TBA | TBA | TBA | TBA | TBA |
+| Sprint 2 | Tuoteomistaja | Scrummaster | Kehitystiimin jäsen | Kehitystiimin jäsen | Kehitystiimin jäsen |
 | Sprint 3 | TBA | TBA | TBA | TBA | TBA |
 | Sprint 4| TBA | TBA | TBA | TBA | TBA |
 | Sprint 5 | TBA | TBA | TBA | TBA | TBA |
