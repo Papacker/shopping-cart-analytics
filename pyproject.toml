@@ -1,0 +1,10 @@
+[project]
+name = "projektiopinnot-1-datan-hallinta-laitetaan-parastamme"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "crewai>=1.12.2",
+    "pandas>=3.0.2",
+]
