@@ -4,3 +4,6 @@ data/raw/*.csv
 # Virtuaaliympäristöt
 .venv/
 venv/
+
+# database
+.schema
