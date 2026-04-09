@@ -6,4 +6,9 @@ data/raw/*.csv
 venv/
 
 # database
-.schema
+database/*.sql
+*.sql
+
+# Jupyter
+.ipynb_checkpoints/
+
