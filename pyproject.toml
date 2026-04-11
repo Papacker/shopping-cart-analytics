@@ -14,5 +14,7 @@ dependencies = [
     "numpy>=2.4.4",
     "pandas>=3.0.2",
     "plotly>=6.6.0",
+    "pyarrow>=23.0.1",
     "seaborn>=0.13.2",
+    "streamlit>=1.56.0",
 ]

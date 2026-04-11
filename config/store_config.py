@@ -7,9 +7,9 @@ store_config = {
             "filename": "kauppa.jpg",
             "width_px": 1280,
             "height_px": 617,
-            "scale_cm_per_px": 0.11015,
-            "origin_x_px": 108.7,
-            "origin_y_px": 22.0,
+            "scale_cm_per_px": 8.11015,
+            "origin_x_px": 50.0,
+            "origin_y_px": 45.0,
             "invert_y": True
         },
         "timezone": "Europe/Helsinki"
