@@ -225,4 +225,3 @@ Hyödyt
 Haitat 
 -	Vaatii uuden opiskelua
 -	Saattaa lisää kompleksisuutta
-
