@@ -45,7 +45,7 @@ def run_etl():
         file_name = os.path.basename(file_path)
         parquet_path = PROCESSED_DIR / file_name.replace('.csv', '.parquet')
 
-        # Ohitetaan, jos parquet on jo olemassa
+        
         if parquet_path.exists():
             continue
 
@@ -58,6 +58,7 @@ def run_etl():
             # 2. PUHDISTUS
             df_spatial, _ = cleaner.clean_spatial(df_raw)
             df_sessionized = cleaner.sessionize(df_spatial)
+            df_motion_cleaned = cleaner.clean_motion(df_sessionized)
             df_final, visit_metrics, quality_logs = cleaner.validate_sessions(df_sessionized)
             
             file_cleaned_count = len(df_final)

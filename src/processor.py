@@ -37,6 +37,35 @@ class StoreDataCleaner:
 
         return df_in, rejected_points
 
+    def clean_motion(self, df):
+        """
+        Suodattaa pisteet liikenopeuden perusteella.
+        - max_jump_speed_ms: maksiminopeus pisteiden välillä
+        - max_avg_speed_ms: maksimi keskinopeus
+        - min_avg_speed_ms: minimi keskinopeus
+        """
+        if df.empty:
+            return df
+        
+        df = df.sort_values(['node_id', 'timestamp']).copy()
+        
+        # Laske nopeus pisteiden välillä (m/s)
+        df['dx'] = df.groupby('node_id')['x'].diff() / 100  # cm → m
+        df['dy'] = df.groupby('node_id')['y'].diff() / 100  # cm → m
+        df['dt'] = df.groupby('node_id')['timestamp'].diff().dt.total_seconds()
+        
+        # Nopeus (m/s)
+        df['speed'] = np.sqrt(df['dx']**2 + df['dy']**2) / df['dt'].replace(0, np.nan)
+        
+        # Suodata liian nopeat hypyt
+        mask_jump = df['speed'] <= self.motion['max_jump_speed_ms']
+        df_clean = df[mask_jump | df['speed'].isna()].copy()
+        
+        # Poista väliaikaiset sarakkeet
+        df_clean = df_clean.drop(columns=['dx', 'dy', 'dt', 'speed'], errors='ignore')
+        
+        return df_clean
+
     def sessionize(self, df):
         if df.empty: return df
         df = df.sort_values(['node_id', 'timestamp'])
@@ -56,7 +85,7 @@ class StoreDataCleaner:
     def validate_sessions(self, df):
         valid_data = []
         stats = []
-        quality_records = [] # Tänne kerätään sessiotason laatuarviot
+        quality_records = []
 
         if df.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -101,6 +130,16 @@ class StoreDataCleaner:
             if dist < self.logic['min_dist_m']:
                 quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_SHORT_DISTANCE', 'more_info': f'dist: {dist:.1f}m'})
                 continue
+
+            # TARKISTUS 5: Keskinopeus
+            if dist > 0 and duration > 0:
+                avg_speed = dist / duration
+                if avg_speed > self.motion['max_avg_speed_ms']:
+                    quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_FAST', 'more_info': f'speed: {avg_speed:.2f} m/s'})
+                    continue
+                if avg_speed < self.motion['min_avg_speed_ms']:
+                    quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_SLOW', 'more_info': f'speed: {avg_speed:.2f} m/s'})
+                    continue
 
             # Jos kaikki ok
             valid_data.append(group)
