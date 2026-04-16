@@ -1,4 +1,3 @@
-# src/processor.py
 import pandas as pd
 import numpy as np
 
@@ -37,35 +36,6 @@ class StoreDataCleaner:
 
         return df_in, rejected_points
 
-    def clean_motion(self, df):
-        """
-        Suodattaa pisteet liikenopeuden perusteella.
-        - max_jump_speed_ms: maksiminopeus pisteiden välillä
-        - max_avg_speed_ms: maksimi keskinopeus
-        - min_avg_speed_ms: minimi keskinopeus
-        """
-        if df.empty:
-            return df
-        
-        df = df.sort_values(['node_id', 'timestamp']).copy()
-        
-        # Laske nopeus pisteiden välillä (m/s)
-        df['dx'] = df.groupby('node_id')['x'].diff() / 100  # cm → m
-        df['dy'] = df.groupby('node_id')['y'].diff() / 100  # cm → m
-        df['dt'] = df.groupby('node_id')['timestamp'].diff().dt.total_seconds()
-        
-        # Nopeus (m/s)
-        df['speed'] = np.sqrt(df['dx']**2 + df['dy']**2) / df['dt'].replace(0, np.nan)
-        
-        # Suodata liian nopeat hypyt
-        mask_jump = df['speed'] <= self.motion['max_jump_speed_ms']
-        df_clean = df[mask_jump | df['speed'].isna()].copy()
-        
-        # Poista väliaikaiset sarakkeet
-        df_clean = df_clean.drop(columns=['dx', 'dy', 'dt', 'speed'], errors='ignore')
-        
-        return df_clean
-
     def sessionize(self, df):
         if df.empty: return df
         df = df.sort_values(['node_id', 'timestamp'])
@@ -74,6 +44,29 @@ class StoreDataCleaner:
         df['session_id'] = df.groupby('node_id')['new_session'].cumsum()
         df['final_sid'] = df['node_id'].astype(str) + "_" + df['session_id'].astype(str)
         return df
+
+    def clean_motion(self, df):
+        if df.empty: return df
+        df = df.sort_values(['final_sid', 'timestamp'])
+        
+        # Lasketaan aika ja matka metreinä
+        df['dt_step'] = df.groupby('final_sid')['timestamp'].diff().dt.total_seconds()
+        df['dx_m'] = df.groupby('final_sid')['x'].diff() / 100.0
+        df['dy_m'] = df.groupby('final_sid')['y'].diff() / 100.0
+        
+        # KORJAUS: Jos aikaero on 0 (tai alle 0.1s), pakotetaan nopeus massiiviseksi (999.0 m/s)
+        # Jolloin suodatin varmasti nappaa ja poistaa kohinan
+        df['speed_ms'] = np.where(
+            df['dt_step'] > 0.1, 
+            np.sqrt(df['dx_m']**2 + df['dy_m']**2) / df['dt_step'], 
+            999.0  
+        )
+        
+        # Suodatetaan
+        max_speed = self.motion['max_jump_speed_ms']
+        valid_points = df[(df['speed_ms'] <= max_speed) | df['speed_ms'].isna()].copy()
+        
+        return valid_points.drop(columns=['dt_step', 'dx_m', 'dy_m', 'speed_ms'])
 
     def is_operational(self, timestamp):
         wd = timestamp.day_name()
@@ -85,7 +78,7 @@ class StoreDataCleaner:
     def validate_sessions(self, df):
         valid_data = []
         stats = []
-        quality_records = []
+        quality_records = [] # Tänne kerätään sessiotason laatuarviot
 
         if df.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -130,16 +123,6 @@ class StoreDataCleaner:
             if dist < self.logic['min_dist_m']:
                 quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_SHORT_DISTANCE', 'more_info': f'dist: {dist:.1f}m'})
                 continue
-
-            # TARKISTUS 5: Keskinopeus
-            if dist > 0 and duration > 0:
-                avg_speed = dist / duration
-                if avg_speed > self.motion['max_avg_speed_ms']:
-                    quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_FAST', 'more_info': f'speed: {avg_speed:.2f} m/s'})
-                    continue
-                if avg_speed < self.motion['min_avg_speed_ms']:
-                    quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_SLOW', 'more_info': f'speed: {avg_speed:.2f} m/s'})
-                    continue
 
             # Jos kaikki ok
             valid_data.append(group)
