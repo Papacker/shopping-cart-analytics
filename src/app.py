@@ -15,6 +15,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import duckdb
+import pandas as pd
 
 # Repo-moduulit
 from config.store_config import store_config
@@ -26,9 +27,20 @@ DB_PATH = PROJECT_ROOT / "database" / "store.db"
 IMAGE_FILENAME = "kauppa.jpg"
 IMAGE_PATH = PROJECT_ROOT / IMAGE_FILENAME
 
+def fetch_data(query):
+    """Suorittaa SQL-kyselyn turvallisesti ilman tiedostolukkoja."""
+    if not DB_PATH.exists():
+        return pd.DataFrame()
+    try:
+        with duckdb.connect(str(DB_PATH), read_only=True) as con:
+            return con.execute(query).df()
+    except Exception as e:
+        st.error(f"Tietokantavirhe: {e}")
+        return pd.DataFrame()
+
 # 4. KÄYTTÖLIITTYMÄ
-st.set_page_config(page_title="UWB Platform v1", layout="wide")
-st.title("🛒 Tokmannin UWB-paikannusdata")
+st.set_page_config(page_title="UWB laitetaan parastamme", layout="wide")
+st.title("🛒 Laitetaan parastamme - UWB-paikannnusdata")
 
 # SIDEBAR
 st.sidebar.header("⚙️ Hallinta")
@@ -75,6 +87,8 @@ else:
     st.text(f"Kuva: {IMAGE_FILENAME}")
     st.text(f"Koko: {img.shape[1]} x {img.shape[0]} px")
 
+    
+
 #  TIETOKANNAN TILA
 st.header("📊 Tietokannan tila")
 
@@ -90,3 +104,17 @@ if DB_PATH.exists():
     con.close()
 else:
     st.warning("⚠️ Tietokantaa ei ole (ajaa ETL ensin)")
+
+# =============================================================================
+# 5. LIIKETOIMINTA-ANALYTIIKKA
+# =============================================================================
+st.divider()
+st.header("📈 Liiketoiminta-analytiikka")
+
+if DB_PATH.exists():
+    # Luodaan välilehdet valmiiksi, mutta täytetään nyt vain ensimmäinen
+    tab_heatmap, tab_time, tab_queue = st.tabs([
+        "🔥 Ruuhkat heatmap",
+        "⏰ Aika-analyysi", 
+        "💸 Kassa ja Jonot"
+    ])
