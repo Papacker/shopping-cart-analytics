@@ -19,6 +19,7 @@ import duckdb
 # Repo-moduulit
 from config.store_config import store_config
 from main import run_etl
+from scripts.reset_env import reset_env
 
 # 3. KONFIGURAATIO
 DB_PATH = PROJECT_ROOT / "database" / "store.db"
@@ -41,7 +42,21 @@ if st.sidebar.button("🚀 Aja ETL-putki"):
             st.rerun()
         except Exception as e:
             st.sidebar.error(f"❌ Virhe: {e}")
+st.sidebar.divider() # Selkeyden vuoksi
 
+# 2. TYHJENNYS 
+st.sidebar.subheader("Vaaralliset toiminnot")
+varmistus = st.sidebar.checkbox("Salli tietokannan poisto")
+if st.sidebar.button("🗑️ Tyhjennä tietokanta", disabled=not varmistus):
+    try:
+        # Pakotetaan DuckDB sulkemaan kaikki yhteydet ennen poistoa
+        duckdb.connect().close() 
+        
+        reset_env()
+        st.sidebar.success("✅ Ympäristö tyhjennetty!")
+        st.rerun()
+    except Exception as e:
+        st.sidebar.error(f"Poisto epäonnistui: {e}")
 
 # KUVAN NÄYTTÖ 
 st.header("🗺️ Kaupan pohjakuva")
