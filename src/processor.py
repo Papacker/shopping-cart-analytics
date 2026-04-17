@@ -125,7 +125,7 @@ class StoreDataCleaner:
                 continue
 
             # Jos kaikki ok
-            # group['node_id'] = node_id
+            group['node_id'] = node_id
 
             valid_data.append(group)
             stats.append({
