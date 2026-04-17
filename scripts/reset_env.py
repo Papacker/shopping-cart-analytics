@@ -1,7 +1,7 @@
 import os
 import glob
 from pathlib import Path
-# import streamlit as st
+import streamlit as st
 
 def reset_env():
     # 1. POLUT
@@ -10,7 +10,7 @@ def reset_env():
     DB_PATH = BASE_DIR / "database" / "store.db"
     PROCESSED_DIR = BASE_DIR / "data" / "processed"
 
-    # st.info("🧹 Käynnistetään ympäristön nollaus...")
+    st.info("🧹 Käynnistetään ympäristön nollaus...")
     
     print("🧹 Käynnistetään ympäristön nollaus...")
     print("-" * 40)
