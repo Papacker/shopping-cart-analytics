@@ -15,4 +15,5 @@ venv/
 *.py[cod]
 config/__init__.py
 
-
+# LLM 
+.env
