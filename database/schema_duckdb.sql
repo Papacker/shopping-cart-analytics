@@ -1,4 +1,4 @@
--- 1. Luodaan automaattiset laskurit (Sequences)
+-- 1. Luodaan automaattiset laskurit 
 CREATE SEQUENCE IF NOT EXISTS zone_id_seq;
 CREATE SEQUENCE IF NOT EXISTS quality_id_seq;
 CREATE SEQUENCE IF NOT EXISTS zone_visit_id_seq;
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS Visit (
   end_time TIMESTAMP
 );
 
--- 4. Paikannustiedot (Lisätty DEFAULT-laskuri)
+-- 4. Paikannustiedot 
 CREATE TABLE IF NOT EXISTS Zone (
   zone_id BIGINT PRIMARY KEY DEFAULT nextval('zone_id_seq'),
   visit_id VARCHAR,

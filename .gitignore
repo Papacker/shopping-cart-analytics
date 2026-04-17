@@ -1,5 +1,6 @@
 # Data
 data/raw/*.csv
+data/processed/*.parquet
 
 # Virtuaaliympäristöt
 .venv/
@@ -13,3 +14,5 @@ venv/
 **/__pycache__/
 *.py[cod]
 config/__init__.py
+
+

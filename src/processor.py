@@ -1,4 +1,3 @@
-# src/processor.py
 import pandas as pd
 import numpy as np
 
@@ -45,6 +44,29 @@ class StoreDataCleaner:
         df['session_id'] = df.groupby('node_id')['new_session'].cumsum()
         df['final_sid'] = df['node_id'].astype(str) + "_" + df['session_id'].astype(str)
         return df
+
+    def clean_motion(self, df):
+        if df.empty: return df
+        df = df.sort_values(['final_sid', 'timestamp'])
+        
+        # Lasketaan aika ja matka metreinä
+        df['dt_step'] = df.groupby('final_sid')['timestamp'].diff().dt.total_seconds()
+        df['dx_m'] = df.groupby('final_sid')['x'].diff() / 100.0
+        df['dy_m'] = df.groupby('final_sid')['y'].diff() / 100.0
+        
+        # KORJAUS: Jos aikaero on 0 (tai alle 0.1s), pakotetaan nopeus massiiviseksi (999.0 m/s)
+        # Jolloin suodatin varmasti nappaa ja poistaa kohinan
+        df['speed_ms'] = np.where(
+            df['dt_step'] > 0.1, 
+            np.sqrt(df['dx_m']**2 + df['dy_m']**2) / df['dt_step'], 
+            999.0  
+        )
+        
+        # Suodatetaan
+        max_speed = self.motion['max_jump_speed_ms']
+        valid_points = df[(df['speed_ms'] <= max_speed) | df['speed_ms'].isna()].copy()
+        
+        return valid_points.drop(columns=['dt_step', 'dx_m', 'dy_m', 'speed_ms'])
 
     def is_operational(self, timestamp):
         wd = timestamp.day_name()
@@ -103,6 +125,8 @@ class StoreDataCleaner:
                 continue
 
             # Jos kaikki ok
+            group['node_id'] = node_id
+
             valid_data.append(group)
             stats.append({
                 'visit_id': sid, 'node_id': node_id, 'start_time': start_time, 
