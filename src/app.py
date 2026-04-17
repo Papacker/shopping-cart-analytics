@@ -27,6 +27,8 @@ DB_PATH = PROJECT_ROOT / "database" / "store.db"
 IMAGE_FILENAME = "kauppa.jpg"
 IMAGE_PATH = PROJECT_ROOT / IMAGE_FILENAME
 
+CLEAN_TABLE = "Zone"
+
 def fetch_data(query):
     """Suorittaa SQL-kyselyn turvallisesti ilman tiedostolukkoja."""
     if not DB_PATH.exists():
