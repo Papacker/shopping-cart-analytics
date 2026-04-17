@@ -1,24 +1,27 @@
 """
 duckdb_tools.py - Agenttien yhteys projektin store.db-tietokantaan.
 """
-
-import duckdb
 import os
+import duckdb
 from pathlib import Path
 from crewai.tools import tool
 
-# 1. MÄÄRITETÄÄN POLKU PROJEKTIN TIETOKANTAAN
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# 1. ETSITÄÄN PROJEKTIN JUURI (Tämä on pomminvarma tapa)
+def get_project_root():
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "pyproject.toml").exists() or (parent / ".git").exists():
+            return parent
+    return Path(__file__).resolve().parent.parent.parent
+
+PROJECT_ROOT = get_project_root()
 DB_PATH = PROJECT_ROOT / "database" / "store.db"
 
+print(f"\n--- DEBUG: DuckDB kytkeytyy polkuun: {DB_PATH} ---")
+
 def get_connection():
-    """
-    Avaa yhteyden olemassa olevaan tietokantaan.
-    Käytetään read_only=True, jotta Streamlit ja agentit voivat käyttää kantaa yhtä aikaa.
-    """
     if not DB_PATH.exists():
-        # Jos kantaa ei ole, luodaan uusi (esim. testejä varten)
-        return duckdb.connect(str(DB_PATH))
+        raise FileNotFoundError(f"TIETOKANTAA EI LÖYDY! Polku: {DB_PATH}")
     return duckdb.connect(str(DB_PATH), read_only=True)
 
 @tool("query_duckdb")
