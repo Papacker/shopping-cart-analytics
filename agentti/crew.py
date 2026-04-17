@@ -3,12 +3,16 @@ import sys
 from crewai import LLM, Agent, Crew, Process, Task
 
 # Lisätään polku, jotta tools-kansio löytyy varmasti
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 
 # Tuodaan aiemmin optimoidut työkalut
-from tools.code_tools import run_python, run_shell
-from tools.duckdb_tools import query_duckdb, inspect_schema 
-from tools.file_tools import list_files, read_file, write_file
+from tools import (
+    run_python, run_shell, 
+    query_duckdb, inspect_schema, 
+    list_files, read_file, write_file
+)
 
 # === LLM-konfiguraatio ===
 MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
