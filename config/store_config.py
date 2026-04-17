@@ -36,8 +36,8 @@ store_config = {
     # --- Sessio-logiikka: Kriteerit, joilla asiointitapahtuma hyväksytään ---
     "session_logic": {
         "gap_threshold_s": 300,          # Jos datassa on >5 min tauko, aloitetaan uusi sessio
-        "min_points": 1,                # Minimimäärä datapisteitä hyväksytylle reissulle 50
-        "min_dist_m": 1.0,              # Asiakkaan on liikuttava vähintään 50 metriä
+        "min_points": 50,                # Minimimäärä datapisteitä hyväksytylle reissulle 50
+        "min_dist_m": 50.0,              # Asiakkaan on liikuttava vähintään 50 metriä
         "max_dist_m": 5000.0,            # Yläraja kuljetulle matkalle (suodattaa virheet)
         "min_time_s": 1,               # Asioinnin on kestettävä vähintään 2 minuuttia
         "max_time_s": 5400,              # Maksimikesto 1.5 tuntia

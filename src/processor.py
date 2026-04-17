@@ -125,6 +125,8 @@ class StoreDataCleaner:
                 continue
 
             # Jos kaikki ok
+            # group['node_id'] = node_id
+
             valid_data.append(group)
             stats.append({
                 'visit_id': sid, 'node_id': node_id, 'start_time': start_time, 

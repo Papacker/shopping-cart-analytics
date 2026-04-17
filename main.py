@@ -86,10 +86,16 @@ def run_etl():
                     INSERT INTO Quality (node_id, is_valid, reason, more_info) 
                     SELECT node_id, is_valid, reason, more_info FROM quality_logs
                 """)
+
+            """if not df_final.empty:
+                node_ids = df_final[['node_id']].drop_duplicates()
+                node_ids['description'] = 'kärry_' + node_ids['node_id'].astype(str)
+                con.execute("INSERT INTO ShoppingCart (node_id, description) SELECT node_id, description FROM node_ids")
+
             con.execute("COMMIT")
             
             new_files_processed += 1
-            print(f"✅ {file_name}: {file_raw_count:,} -> {file_cleaned_count:,} riviä")
+            print(f"✅ {file_name}: {file_raw_count:,} -> {file_cleaned_count:,} riviä")"""
 
         except Exception as e:
             con.execute("ROLLBACK")
