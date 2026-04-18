@@ -107,7 +107,10 @@ class StoreDataCleaner:
             is_end_valid = (k_x1 <= end_pt['x'] <= k_x2) and (k_y1 <= end_pt['y'] <= k_y2)
 
             if not (is_start_valid and is_end_valid):
-                quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'INVALID_GATES', 'more_info': f'start:{is_start_valid}, end:{is_end_valid}'})
+                # Tehdään porttitarkistuksesta "pehmeämpi" raportointia varten
+                reason = "INVALID_GATES"
+                info = f"in:{is_start_valid}, out:{is_end_valid}"
+                quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': reason, 'more_info': info})
                 continue
 
             # TARKISTUS 4: Syvyys ja matka
@@ -132,7 +135,19 @@ class StoreDataCleaner:
                 'visit_id': sid, 'node_id': node_id, 'start_time': start_time, 
                 'end_time': group['timestamp'].max(), 'kesto_min': duration / 60
             })
-            quality_records.append({'node_id': node_id, 'is_valid': True, 'reason': 'OK'})
+            quality_records.append({'node_id': node_id, 'is_valid': True, 'reason': 'OK', 'more_info': 'Passed all checks'})
 
         df_final = pd.concat(valid_data) if valid_data else pd.DataFrame()
-        return df_final, pd.DataFrame(stats), pd.DataFrame(quality_records)
+        
+        # Varmistetaan että sarakkeet ovat olemassa vaikkei dataa olisi
+        df_stats = pd.DataFrame(stats)
+        if df_stats.empty:
+            df_stats = pd.DataFrame(columns=['visit_id', 'node_id', 'start_time', 'end_time', 'kesto_min'])
+            
+        df_quality = pd.DataFrame(quality_records)
+        if df_quality.empty:
+            df_quality = pd.DataFrame(columns=['node_id', 'is_valid', 'reason', 'more_info'])
+        elif 'more_info' not in df_quality.columns:
+            df_quality['more_info'] = None
+
+        return df_final, df_stats, df_quality

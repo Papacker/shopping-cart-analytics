@@ -3,16 +3,35 @@ store_config = {
     "geometry": {
         "store_max_x_cm": 10406,      # Myymälän kokonaispituus X-suunnassa (senttimetreinä)
         "store_max_y_cm": 5220,       # Myymälän kokonaisleveys Y-suunnassa (senttimetreinä)
-        "image": {
-            "filename": "kauppa.jpg",  # Taustakuvana käytettävä pohjapiirros
-            "width_px": 1280,          # Pohjakuvan leveys pikseleinä
-            "height_px": 617,          # Pohjakuvan korkeus pikseleinä
-            "scale_cm_per_px": 9.096,  # KALIBROITU: 10406 cm / (1252.7 - 108.7) px
-            "origin_x_px": 108.7,      # Koordinaatiston nollapisteen (0,0) X-sijainti kuvassa
-            "origin_y_px": 22.0,       # Koordinaatiston nollapisteen (0,0) Y-sijainti kuvassa
-            "floor_plan_width_px": 1144.0,  # Leveys pisteestä 0 reunaan 10406
-            "floor_plan_height_px": 572.0,  # Korkeus pisteestä 0 reunaan 5220
-            "invert_y": True           # Käännetäänkö Y-akseli
+        "active_profile": "default",
+        "map_profiles": {
+            "default": {
+                "filename": "kauppa.jpg",
+                "width_px": 1280,
+                "height_px": 617,
+                "scale_cm_per_px": 9.096,
+                "origin_x_px": 108.7,
+                "origin_y_px": 22.0,
+                "invert_y": True
+            },
+            "osasto": {
+                "filename": "kauppa_osasto.jpg",
+                "width_px": 1280,
+                "height_px": 617,
+                "scale_cm_per_px": 9.096,
+                "origin_x_px": 108.7,
+                "origin_y_px": 22.0,
+                "invert_y": True
+            },
+            "kauppa2": {
+                "filename": "kauppa2.jpg",
+                "width_px": 1428,
+                "height_px": 722,
+                "scale_cm_per_px": 8.15, 
+                "origin_x_px": 121.0, 
+                "origin_y_px": 25.0,  
+                "invert_y": True
+            }
         },
         "timezone": "Europe/Helsinki"
     },

@@ -22,9 +22,22 @@ from config.store_config import store_config
 from main import run_etl
 from scripts.reset_env import reset_env
 
-# 3. KONFIGURAATIO
+# 3. KONFIGURAATIO & PROFIILIT
 DB_PATH = PROJECT_ROOT / "database" / "store.db"
-IMAGE_FILENAME = "kauppa.jpg"
+
+# Sallitaan profiilin vaihto lennosta
+PROFIILIT = store_config['geometry']['map_profiles']
+oletus_profiili = store_config['geometry']['active_profile']
+
+st.sidebar.subheader("🗺️ Kartan asetukset")
+valittu_avain = st.sidebar.selectbox(
+    "Valitse karttapohja", 
+    options=list(PROFIILIT.keys()),
+    index=list(PROFIILIT.keys()).index(oletus_profiili)
+)
+
+profiili = PROFIILIT[valittu_avain]
+IMAGE_FILENAME = profiili['filename']
 IMAGE_PATH = PROJECT_ROOT / IMAGE_FILENAME
 
 CLEAN_TABLE = "Zone"
@@ -86,8 +99,10 @@ else:
     st.pyplot(fig)
     
     # Lisätietoa
-    st.text(f"Kuva: {IMAGE_FILENAME}")
-    st.text(f"Koko: {img.shape[1]} x {img.shape[0]} px")
+    c1, c2, c3 = st.columns(3)
+    c1.text(f"Tiedosto: {IMAGE_FILENAME}")
+    c2.text(f"Koko: {img.shape[1]} x {img.shape[0]} px")
+    c3.text(f"Skaala: {profiili['scale_cm_per_px']} cm/px")
 
     
 

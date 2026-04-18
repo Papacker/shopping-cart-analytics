@@ -43,7 +43,7 @@ projektipaallikko = Agent(
     llm=llm,
     tools=pm_tools, 
     verbose=True,
-    allow_delegation=False 
+    allow_delegation=True
 )
 
 analyytikko = Agent(
@@ -77,6 +77,7 @@ def build_crew(task_description: str) -> Crew:
         ),
         expected_output="Selkeä vastaus tai analyysiraportti tietokannan perusteella.",
         agent=projektipaallikko,
+        output_file="agentti/workspace/raportti.md"
     )
 
     return Crew(
