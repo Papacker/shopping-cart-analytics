@@ -34,10 +34,13 @@ def run_etl():
         con.close()
         return
 
-    # --- LASKURIT RIVIMÄÄRILLE ---
-    total_raw_rows = 0
-    total_cleaned_rows = 0
-    new_files_processed = 0
+    # --- LASKURIT ---
+    summary_stats = {
+        "new_files_processed": 0,
+        "total_raw_rows": 0,
+        "total_cleaned_rows": 0,
+        "rejections": {} 
+    }
 
     print(f"📂 Aloitetaan {len(raw_files)} tiedoston tarkistus...")
 
@@ -53,16 +56,22 @@ def run_etl():
             # 1. LUKU
             df_raw = con.execute(f"SELECT * FROM read_csv_auto('{file_path}')").df()
             file_raw_count = len(df_raw)
-            total_raw_rows += file_raw_count
 
             # 2. PUHDISTUS
             df_spatial, _ = cleaner.clean_spatial(df_raw)
             df_sessionized = cleaner.sessionize(df_spatial)
             df_motion_cleaned = cleaner.clean_motion(df_sessionized)
-            df_final, visit_metrics, quality_logs = cleaner.validate_sessions(df_sessionized)
+            df_final, visit_metrics, quality_logs = cleaner.validate_sessions(df_motion_cleaned)
             
+            # --- Kerätään hylkäyssyyt ---
+            if not quality_logs.empty:
+                rejections = quality_logs[quality_logs['is_valid'] == False]['reason'].value_counts().to_dict()
+                for reason, count in rejections.items():
+                    summary_stats["rejections"][reason] = summary_stats["rejections"].get(reason, 0) + count
+
             file_cleaned_count = len(df_final)
-            total_cleaned_rows += file_cleaned_count
+            summary_stats["total_raw_rows"] += file_raw_count
+            summary_stats["total_cleaned_rows"] += file_cleaned_count
 
             # 3. TALLENNUS PARQUET
             if not df_final.empty:
@@ -90,31 +99,40 @@ def run_etl():
             if not df_final.empty:
                 node_ids = df_final[['node_id']].drop_duplicates()
                 node_ids['description'] = 'kärry_' + node_ids['node_id'].astype(str)
-                con.execute("INSERT INTO ShoppingCart (node_id, description) SELECT node_id, description FROM node_ids")
+                con.execute("INSERT OR IGNORE INTO ShoppingCart (node_id, description) SELECT node_id, description FROM node_ids")
 
             con.execute("COMMIT")
             
-            new_files_processed += 1
+            summary_stats["new_files_processed"] += 1
             print(f"✅ {file_name}: {file_raw_count:,} -> {file_cleaned_count:,} riviä")
 
         except Exception as e:
-            con.execute("ROLLBACK")
+            try:
+                con.execute("ROLLBACK")
+            except:
+                pass
             print(f"❌ Virhe tiedostossa {file_name}: {e}")
 
     # --- LOPPURAPORTTI ---
-    print("\n" + "="*40)
-    print("📊 ETL-AJON YHTEENVETO (Uudet tiedostot)")
-    print("="*40)
-    if new_files_processed > 0:
-        print(f"Käsitellyt tiedostot:      {new_files_processed} kpl")
-        print(f"Raakarivejä yhteensä:     {total_raw_rows:,} kpl")
-        print(f"Puhdistettuja rivejä:     {total_cleaned_rows:,} kpl")
+    print("\n" + "="*45)
+    print("📊 ETL-AJON YHTEENVETO")
+    print("="*45)
+    if summary_stats["new_files_processed"] > 0:
+        print(f"Käsitellyt tiedostot:      {summary_stats['new_files_processed']} kpl")
+        print(f"Raakarivejä yhteensä:     {summary_stats['total_raw_rows']:,} kpl")
+        print(f"Hyväksyttyjä rivejä:      {summary_stats['total_cleaned_rows']:,} kpl")
         
-        ratio = (total_cleaned_rows / total_raw_rows * 100) if total_raw_rows > 0 else 0
-        print(f"Puhdistetun datan osuus kokonaismäärästä:         {ratio:.2f} %")
+        ratio = (summary_stats["total_cleaned_rows"] / summary_stats["total_raw_rows"] * 100) if summary_stats["total_raw_rows"] > 0 else 0
+        print(f"Datan hyötysuhde:         {ratio:.1f} %")
+        
+        if summary_stats["rejections"]:
+            print("-" * 45)
+            print("Hylkäyssyyt (Sessiot):")
+            for reason, count in summary_stats["rejections"].items():
+                print(f"  • {reason:25}: {count} kpl")
     else:
         print("Kaikki tiedostot oli jo prosessoitu aiemmin.")
-    print("="*40)
+    print("="*45 + "\n")
     
     con.close()
 
