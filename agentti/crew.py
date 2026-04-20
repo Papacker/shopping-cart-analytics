@@ -64,6 +64,23 @@ koodaaja = Agent(
     verbose=True
 )
 
+liiketoiminta-agentti = Agent( 
+    role="Ali Baba",
+    goal="Toteuta laskentaa ja visualisointeja",
+    backstory="Python-kehittäjä. Tallennat tulokset workspace-kansioon.",
+    llm=llm,
+    tools=koodaus_tools,
+    verbose=True
+)
+testaaja-agentti = Agent(
+    role="Testaaja",
+    goal="Testaa koodaajan koodia, eli varmista että se toimii ja tuottaa halutun tuloksen",
+    backstory="Testaaja. Tallennat tulokset workspace-kansioon.",
+    llm=llm,
+    tools=koodaus_tools,
+    verbose=True
+)
+
 # === Tehtävän hallinta ===
 
 def build_crew(task_description: str) -> Crew:
