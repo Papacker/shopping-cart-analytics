@@ -63,8 +63,7 @@ koodaaja = Agent(
     tools=koodaus_tools,
     verbose=True
 )
-
-liiketoiminta-agentti = Agent( 
+liiketoiminta_agentti = Agent( 
     role="Ali Baba",
     goal="Toteuta laskentaa ja visualisointeja",
     backstory="Python-kehittäjä. Tallennat tulokset workspace-kansioon.",
@@ -72,7 +71,7 @@ liiketoiminta-agentti = Agent(
     tools=koodaus_tools,
     verbose=True
 )
-testaaja-agentti = Agent(
+testaaja_agentti = Agent(
     role="Testaaja",
     goal="Testaa koodaajan koodia, eli varmista että se toimii ja tuottaa halutun tuloksen",
     backstory="Testaaja. Tallennat tulokset workspace-kansioon.",
