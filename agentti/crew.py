@@ -30,37 +30,48 @@ llm = LLM(
 # Annetaan kaikille agenteille pääsy tietokantatyökaluihin, jotta kukaan ei hämmenny
 pm_tools = [query_duckdb, inspect_schema] 
 data_tools = [query_duckdb, inspect_schema, list_files, read_file, write_file]
-koodaus_tools = [run_python, run_shell, read_file, write_file, list_files]
+code_tools = [run_python, run_shell, read_file, write_file, list_files]
 
-projektipaallikko = Agent(
-    role="UWB-analyysijohtaja",
-    goal="Hae taulujen nimet ja tilastot suoraan tietokannasta.",
+# 1. THE STRATEGIC LEADER
+manager = Agent(
+    role="UWB Analysis Manager",
+    goal="Orchestrate the analysis process to identify shopping cart patterns and store bottlenecks.",
     backstory=(
-        "Olet analyysijohtaja. Sinulla on suora yhteys tietokantaan. "
-        "ÄLÄ yritä etsiä store.db-tiedostoa list_files-työkalulla. "
-        "Käytä AINA 'inspect_schema'-työkalua nähdäksesi taulut."
+        "You are the strategic lead. You MUST use 'inspect_schema' first to understand the data structure. "
+        "You then share the relevant table and column names with the Analyst and Engineer. "
+        "Your focus is on ensuring the workflow leads to actionable insights about customer flows."
     ),
     llm=llm,
     tools=pm_tools, 
     verbose=True,
-    allow_delegation=True
+    allow_delegation=True # Essential for hierarchical logic
 )
 
-analyytikko = Agent(
-    role="UWB-analyytikko",
-    goal="Listaa taulut tietokannasta",
-    backstory="Olet robotti joka käyttää vain query_duckdb-työkalua. Älä etsi tiedostoja.",
+# 2. THE DATA MINER
+analyst = Agent(
+    role="Data Discovery Analyst",
+    goal="Extract and aggregate UWB positioning data from DuckDB for specific store zones.",
+    backstory=(
+        "You are an expert in SQL. You receive the schema information from the Manager and "
+        "perform complex queries to calculate session durations"
+        "You provide structured data for the Python Engineer."
+    ),
     llm=llm,
-    tools=[query_duckdb, inspect_schema], 
+    tools=data_tools, 
     verbose=True,
     max_iter=3
 )
-koodaaja = Agent(
-    role="Python-insinööri",
-    goal="Toteuta laskentaa ja visualisointeja",
-    backstory="Python-kehittäjä. Tallennat tulokset workspace-kansioon.",
+# 3. THE VISUALIZATION ENGINEER
+engineer = Agent(
+    role="Python Visualization Engineer",
+    goal="Create high-quality heatmaps and flow diagrams from the analyzed data.",
+    backstory=(
+        "You use Pandas, Matplotlib, and Seaborn to transform data into visual heatmaps. "
+        "You focus on visualizing checkout congestion and department-specific bottlenecks. "
+        "You save all outputs to the 'workspace' folder."
+    ),
     llm=llm,
-    tools=koodaus_tools,
+    tools=code_tools,
     verbose=True
 )
 
@@ -76,12 +87,13 @@ def build_crew(task_description: str) -> Crew:
             "3. Suorita SQL-kyselyt ja anna selkeä vastaus."
         ),
         expected_output="Selkeä vastaus tai analyysiraportti tietokannan perusteella.",
-        agent=projektipaallikko,
+        agent=manager,
         output_file="agentti/workspace/raportti.md"
     )
 
+    jls_extract_var = [manager, analyst, engineer]
     return Crew(
-        agents=[projektipaallikko, analyytikko, koodaaja],
+        agents=jls_extract_var,
         tasks=[tehtava],
         process=Process.sequential,
         verbose=True,
