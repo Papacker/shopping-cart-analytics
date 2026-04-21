@@ -1,26 +1,26 @@
 store_config = {
     # --- Kaupan fyysinen koko ja karttapohjan asetukset ---
     "geometry": {
-        "store_max_x_cm": 10406,      # Myymälän kokonaispituus X-suunnassa (senttimetreinä)
+        "store_max_x_cm": 11206,      # Myymälän kokonaispituus X-suunnassa (senttimetreinä)
         "store_max_y_cm": 5220,       # Myymälän kokonaisleveys Y-suunnassa (senttimetreinä)
         "active_profile": "default",
         "map_profiles": {
             "default": {
                 "filename": "kauppa.jpg",
-                "width_px": 1280,
-                "height_px": 617,
-                "scale_cm_per_px": 9.096,
-                "origin_x_px": 108.7,
-                "origin_y_px": 22.0,
+                "width_px": 1222,
+                "height_px": 567,
+                "scale_cm_per_px": 9.17,
+                "origin_x_px": 87.2,
+                "origin_y_px": 0.0,
                 "invert_y": True
             },
             "osasto": {
                 "filename": "kauppa_osasto.jpg",
-                "width_px": 1280,
-                "height_px": 617,
-                "scale_cm_per_px": 9.096,
-                "origin_x_px": 108.7,
-                "origin_y_px": 22.0,
+                "width_px": 1222,
+                "height_px": 567,
+                "scale_cm_per_px": 9.17,
+                "origin_x_px": 87.2,
+                "origin_y_px": 0.0,
                 "invert_y": True
             },
             "kauppa2": {
@@ -31,7 +31,7 @@ store_config = {
                 "origin_x_px": 121.0, 
                 "origin_y_px": 25.0,  
                 "invert_y": True
-            }
+            },
         },
         "timezone": "Europe/Helsinki"
     },
@@ -39,49 +39,52 @@ store_config = {
     # --- Vyöhykemääritykset: Portit ja hylättävät alueet ---
     "spatial_zones": {
         "gates": {
-            "sisäänkäynti": {"coords": (0, 1790, 2357, 2975), "color": "lime", "type": "inbound"},
-            "kassa": {"coords": (0, 700, 0, 2021), "color": "red", "type": "outbound"}
+            "sisäänkäynti": {"coords": (0, 1790, 2350, 2975), "color": "lime", "type": "inbound"},
+            "kassa": {"coords": (0, 700, 0, 2000), "color": "red", "type": "outbound"}
         },
         "dead_zones": {
-            "varasto": (0, 1566, 3031, 5220),
+            "varasto": (0, 1450, 3031, 5220),
             "lastaus": (8392, 10406, 0, 505),
             "lovi": (9902, 10406, 4659, 5220),
             "latauspiste_1": (0, 200, 2350, 2650),
             "latauspiste_2": (750, 1050, 3450, 3750)
         },
         "departments": {
-        "1-2 Kirjat": {"coords": (1566, 2685, 3536, 5220), "color": "red"},
-        "3-9 Vaatteet": {"coords": (2685, 5800, 3536, 5220), "color": "blue"},
-        "10-11 Lasten ruoka": {"coords": (5800, 6900, 3536, 5220), "color": "orange"},
-        "12 Snacks": {"coords": (6900, 7700, 3536, 5220), "color": "green"},
-        "13-19 Juomat": {"coords": (7700, 10406, 3536, 5220), "color": "purple"},
-        "20-25 Kauneus": {"coords": (1790, 3850, 2357, 3536), "color": "pink"},
-        "26-34 Jalkineet": {"coords": (3850, 6490, 2357, 3536), "color": "brown"},
-        "35-36 Elektroniikka": {"coords": (6490, 7105, 2357, 3536), "color": "cyan"},
-        "37-42 Hevi": {"coords": (7105, 8895, 2357, 3536), "color": "lime"},
-        "43-46 Leipomo": {"coords": (8895, 10406, 2245, 3536), "color": "gold"},
-        "47 Liha/Kala": {"coords": (8392, 10406, 505, 2245), "color": "darkred"},
-        "48-50 & 61-63 Pakasteet": {"coords": (6250, 8392, 0, 2245), "color": "lightblue"},
-        "51-54 Maitotuotteet": {"coords": (4150, 6250, 0, 898), "color": "yellow"},
-        "55-59 Lelut": {"coords": (3000, 4150, 0, 1066), "color": "magenta"},
-        "60 Urheilu": {"coords": (1678, 3000, 0, 1066), "color": "silver"},
-        "64-69 Kuivat": {"coords": (4532, 6250, 898, 2245), "color": "darkgreen"},
-        "70 Lemmikit": {"coords": (4150, 4532, 898, 2245), "color": "coral"},
-        "71-72 Keittiö": {"coords": (3200, 4150, 1066, 2245), "color": "navy"},
-        "73 Sesonki": {"coords": (2350, 3200, 1066, 2245), "color": "olive"},
-        "74-75 Tekstiilit": {"coords": (1678, 2350, 1066, 2245), "color": "teal"},
-        "76-77 Kukat": {"coords": (700, 1678, 0, 2245), "color": "indigo"}
+        "1-2 Kirjat": {"coords": (1500, 2685, 3800, 5220), "color": "red"},
+        "3-9 Vaatteet": {"coords": (2685, 5800, 3800, 5220), "color": "blue"},
+        "10-11 Lasten ruoka": {"coords": (5800, 6900, 3800, 5220), "color": "orange"},
+        "12 Snacks": {"coords": (6900, 7700, 3750, 5220), "color": "green"},
+        "13-19 Juomat": {"coords": (7700, 10406, 3750, 5220), "color": "purple"},
+        "Kausitori": {"coords": (450, 2050, 2350, 2650), "color": "cyan"},
+        "20-25 Kauneus": {"coords": (2050, 3800, 2350, 3300), "color": "pink"},
+        "26-34 Jalkineet": {"coords": (3800, 6490, 2350, 3300), "color": "brown"},
+        "35-36 Elektroniikka": {"coords": (6490, 7105, 2350, 3300), "color": "cyan"},
+        "37-42 Hevi": {"coords": (7105, 8895, 2350, 3300), "color": "lime"},
+        "43-46 Leipomo": {"coords": (9300, 10406, 2220, 3550), "color": "gold"},
+        "47 Liha/Kala": {"coords": (8325, 10406, 505, 2220), "color": "darkred"},
+        "48-50 Pakasteet": {"coords": (6250, 8325, 0, 800), "color": "lightblue"},
+        "61-63 Pakasteet": {"coords": (6250, 8325, 1050, 2220), "color": "lightblue"},
+        "51-54 Maitotuotteet": {"coords": (4100, 6250, 0, 800), "color": "yellow"},
+        "55-59 Lelut": {"coords": (3000, 4100, 0, 1000), "color": "magenta"},
+        "60 Urheilu": {"coords": (1678, 3000, 0, 1000), "color": "silver"},
+        "64-66 Kuivat": {"coords": (5600, 6250, 1050, 2220), "color": "darkgreen"},
+        "66-69 Kuivat": {"coords": (4532, 5600, 1250, 2220), "color": "darkgreen"},
+        "70 Lemmikit": {"coords": (4100, 4532, 1250, 2220), "color": "coral"},
+        "71-72 Keittiö": {"coords": (3200, 4100, 1250, 2220), "color": "navy"},
+        "73 Sesonki": {"coords": (2350, 3200, 1250, 2220), "color": "olive"},
+        "74-75 Tekstiilit": {"coords": (1678, 2350, 1250, 2220), "color": "teal"},
+        "76 Kukat": {"coords": (700, 1678, 0, 1000), "color": "indigo"},
+        "77 Kukat": {"coords": (700, 1678, 1400, 2220), "color": "indigo"}
         },
         "checkouts": {
-            "Kassa 8": {"coords": (0, 700, 0, 337), "color": "red"},
-            "Kassa 7": {"coords": (0, 700, 337, 539), "color": "grey"},
-            "Kassa 6": {"coords": (0, 700, 539, 769), "color": "red"},
-            "Kassa 5": {"coords": (0, 700, 769, 999), "color": "grey"},
-            "Kassa 4": {"coords": (0, 700, 999, 1235), "color": "red"},
-            "Kassa 3": {"coords": (0, 700, 1235, 1448), "color": "grey"},
-            "Kassa 2": {"coords": (0, 700, 1448, 1740), "color": "red"},
-            "Kassa 1": {"coords": (0, 700, 1740, 2021), "color": "grey"},
-            "Info": {"coords": (0, 559, 2021, 2498), "color": "yellow"}
+            "Kassa 8": {"coords": (-200, 700, 0, 275), "color": "red"},
+            "Kassa 7": {"coords": (-200, 700, 275, 525), "color": "grey"},
+            "Kassa 6": {"coords": (-200, 700, 525, 730), "color": "red"},
+            "Kassa 5": {"coords": (-200, 700, 730, 975), "color": "grey"},
+            "Kassa 4": {"coords": (-200, 700, 975, 1200), "color": "red"},
+            "Kassa 3": {"coords": (-200, 700, 1200, 1425), "color": "grey"},
+            "Kassa 2": {"coords": (-200, 700, 1425, 1700), "color": "red"},
+            "Kassa 1": {"coords": (-200, 700, 1700, 2000), "color": "grey"}
         }
     },
 
