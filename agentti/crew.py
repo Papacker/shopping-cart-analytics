@@ -86,7 +86,7 @@ liiketoiminta_agentti = Agent(
     goal="Toteuta laskentaa ja visualisointeja",
     backstory="Python-kehittaja. Tallennat tulokset workspace-kansioon.",
     llm=llm,
-    tools=koodaus_tools,
+    tools=code_tools,
     verbose=True,
 )
 
@@ -104,7 +104,7 @@ testaaja_agentti = Agent(
         "ALA kutsu muita testaustyokaluja erikseen."
     ),
     llm=llm,
-    tools=testaaja_tools,
+    tools=code_tools,
     verbose=True,
     max_iter=5,
 )
@@ -155,7 +155,7 @@ def build_crew(task_description: str) -> Crew:
             "3. Suorita SQL-kyselyt ja anna selkea vastaus."
         ),
         expected_output="Selkea vastaus tai analyysiraportti tietokannan perusteella.",
-        agent=projektipaallikko,
+        agent=manager,
         output_file="agentti/workspace/raportti.md",
     )
 
@@ -166,7 +166,7 @@ def build_crew(task_description: str) -> Crew:
             "Anna koodatulle tiedostolle kuvaava nimi, esim. 'analyysi.py'."
         ),
         expected_output="Valmis Python-tiedosto workspace-kansiossa.",
-        agent=koodaaja,
+        agent=engineer,
     )
 
     testaus_tehtava = Task(
@@ -186,7 +186,7 @@ def build_crew(task_description: str) -> Crew:
     )
 
     return Crew(
-        agents=[projektipaallikko, analyytikko, koodaaja, testaaja_agentti],
+        agents=[manager, analyst, engineer, testaaja_agentti],
         tasks=[analyysi_tehtava, koodaus_tehtava, testaus_tehtava],
         process=Process.sequential,
         verbose=True,
