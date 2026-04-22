@@ -81,8 +81,8 @@ Projektin eri osa-alueet toteutetaan nk. "agenttityyppien" avulla:
 **Muut menetelmät ja ympäristöt:**
 - Lähdekoodi ja versiohallinta: Gitlab
 - Ajanhallinta: Clockify
-- Editorit: Wakatime, Koodieditori
-- Ympäristö: Docker, MariaDB, JupyterLab
+- Editorit: Wakatime, Koodieditori(antigravity)
+- Ympäristö: Docker/Discolabra, DuckDB, JupyterLab, Antigravity, ETL-putki, CrewAI
 - DCLabra: [iamai-workspace](https://disco.dclabra.fi/@Papacker/team-2-laitetaan-parastamme)
 
 Ajantasaiset sprinttitavoitteet löytyvät GitLabin Issue Boardilta.
