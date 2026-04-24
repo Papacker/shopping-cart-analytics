@@ -13,27 +13,32 @@ before_script:
   - pip install uv
   - uv venv .venv
   - source .venv/bin/activate
-  - uv pip install . # Tai 'uv pip install -r pyproject.toml'
+  - uv pip install . 
 
 stages:
   - lint
   - test
 
-# Tarkistetaan koodin laatu (Pylint)
+# --- LINT-VAIHE ---
 linting:
   stage: lint
+  tags:
+    - docker  # TÄMÄ RIVI KÄSKEE RUNNERIA #224 POIMIMAAN TYÖN
   script:
     - uv pip install pylint
     - pylint main.py app.py agentti/crew.py --fail-under=5.0
   allow_failure: true
 
-# Suoritetaan varsinaiset testit
+# --- TEST-VAIHE ---
 unit_tests:
   stage: test
+  tags:
+    - docker  # TÄMÄ RIVI KÄSKEE RUNNERIA #224 POIMIMAAN TYÖN
   script:
     - uv pip install pytest pytest-mock pandas duckdb pyarrow
     - coverage run -m pytest tests/
     - coverage report -m
+    - coverage xml
   artifacts:
     reports:
       coverage_report:
