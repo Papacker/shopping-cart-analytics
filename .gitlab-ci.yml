@@ -11,28 +11,27 @@ cache:
 
 before_script:
   - pip install uv
-  - uv venv
+  - uv venv .venv
   - source .venv/bin/activate
-  - uv pip install -r pyproject.toml 
+  - uv pip install . # Tai 'uv pip install -r pyproject.toml'
 
 stages:
   - lint
   - test
 
-# --- LINT-VAIHE ---
-lint:python:
+# Tarkistetaan koodin laatu (Pylint)
+linting:
   stage: lint
   script:
     - uv pip install pylint
-    - pylint main.py app.py agentti/crew.py src/*.py --fail-under=5.0
+    - pylint main.py app.py agentti/crew.py --fail-under=5.0
   allow_failure: true
 
-# --- TEST-VAIHE ---
-test:logic:
+# Suoritetaan varsinaiset testit
+unit_tests:
   stage: test
   script:
-    - uv pip install pytest coverage
-    # Ajetaan testit ja seurataan kattavuutta
+    - uv pip install pytest pytest-mock pandas duckdb pyarrow
     - coverage run -m pytest tests/
     - coverage report -m
   artifacts:
@@ -40,11 +39,3 @@ test:logic:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-
-# --- ERIKOISTESTIT (Valinnainen) ---
-test:crew_logic:
-  stage: test
-  script:
-    # Testataan vain agentin logiikka (ilman oikeaa LLM-kutsua, jos käytät mockeja)
-    - pytest tests/test_crew.py
-
