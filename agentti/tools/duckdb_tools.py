@@ -8,7 +8,7 @@ Tämä moduuli tarjoaa kaksi työkalua:
 
 import os
 import sys
-from crewai import tool
+from crewai.tools import tool
 from pydantic import BaseModel
 from typing import Optional
 
