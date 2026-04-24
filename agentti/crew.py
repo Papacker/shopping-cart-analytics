@@ -2,6 +2,13 @@
 
 import os
 import sys
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Skripti on /agentti/crew.py -> .env on /
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent
+env_path = project_root / ".env"
 
 # Lisätään polku, jotta tools-kansio löytyy varmasti
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,8 +28,9 @@ from tools.tester_agent import _run_test_file, WORKSPACE as TESTER_WORKSPACE
 # pylint: enable=wrong-import-position
 
 # === LLM-konfiguraatio ===
-MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "qwen2.5-coder:14b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
+
 
 llm = LLM(
     model=f"ollama/{MODEL_NAME}",
@@ -132,9 +140,9 @@ def build_tester_crew(file_path: str) -> Crew:
         output_file="agentti/workspace/testitulokset.md",
     )
 
-    jls_extract_var = [manager, analyst, engineer]
+    
     return Crew(
-        agents=jls_extract_var,
+        agents=[manager, analyst, engineer],
         tasks=[tehtava],
         process=Process.sequential,
         verbose=True,
