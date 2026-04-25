@@ -30,11 +30,11 @@ linting:
   script:
     - uv pip install pylint
     - echo "Running pylint on main components..."
-    - pylint src/ tests/ main.py agentti/ --fail-under=5.0 || echo "Pylint completed with warnings"
+    - pylint src/ tests/ main.py agentti/ --fail-under=5.0 > pylint-report.txt || (cat pylint-report.txt && true)
   allow_failure: true
   artifacts:
-    reports:
-      pylint: pylint-report.txt
+    paths:
+      - pylint-report.txt
     expire_in: 1 week
 
 # --- TEST-VAIHE ---
