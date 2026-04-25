@@ -7,7 +7,5 @@ from .file_tools import list_files, read_file, write_file
 __all__ = [
     "run_python", "run_shell",
     "query_duckdb", "inspect_schema",
-    "list_files", "read_file", "write_file",
-    "test_file", "run_file", "run_tests", 
-    "check_syntax", "run_and_assert", "run_pylint", "run_coverage"
+    "list_files", "read_file", "write_file"
 ]

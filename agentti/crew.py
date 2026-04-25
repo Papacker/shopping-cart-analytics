@@ -21,11 +21,8 @@ from tools import (
     run_python, run_shell,
     query_duckdb, inspect_schema,
     list_files, read_file, write_file,
-    test_file, run_file,
-    run_tests, check_syntax, run_and_assert, run_pylint, run_coverage,
 )
-from tools.tester_agent import _run_test_file, WORKSPACE as TESTER_WORKSPACE
-# pylint: enable=wrong-import-position
+
 
 # === LLM-konfiguraatio ===
 MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "qwen2.5-coder:14b")
