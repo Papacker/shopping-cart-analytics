@@ -13,9 +13,9 @@ cache:
 
 before_script:
   - pip install uv
-  - uv venv .venv
+  - uv venv .venv --clear  
   - source .venv/bin/activate
-  - uv pip install . 
+  - uv pip install .
 
 stages:
   - lint
