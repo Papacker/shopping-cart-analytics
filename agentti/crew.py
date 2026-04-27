@@ -4,6 +4,11 @@ import os
 import sys
 from dotenv import load_dotenv
 from pathlib import Path
+import pandas as pd
+import matplotlib as plt
+import seaborn as sns
+
+
 
 # Skripti on /agentti/crew.py -> .env on /
 current_file = Path(__file__).resolve()
@@ -27,7 +32,7 @@ from tools import (
 # === LLM-konfiguraatio ===
 MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "qwen2.5-coder:14b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
-
+x
 
 llm = LLM(
     model=f"ollama/{MODEL_NAME}",
@@ -94,57 +99,7 @@ liiketoiminta_agentti = Agent(
     tools=code_tools,
     verbose=True,
 )
-
-testaaja_agentti = Agent(
-    role="Python-testaaja",
-    goal=(
-        "Testaa annettu Python-tiedosto kattavasti ja kirjoita "
-        "markdown-raportti workspace/testitulokset.md-tiedostoon."
-    ),
-    backstory=(
-        "Olet QA-insinoori. Paatyokalusi on 'test_file'. "
-        "Kutsu sita tiedostopolulla (esim. 'agentti/crew.py'). "
-        "Se ajaa syntaksitarkistuksen, pylintin, pytestin ja coveragen. "
-        "Tallenna raportti write_file-tyokalulla polkuun 'testitulokset.md'. "
-        "ALA kutsu muita testaustyokaluja erikseen."
-    ),
-    llm=llm,
-    tools=code_tools,
-    verbose=True,
-    max_iter=5,
-)
-
-# === Crewit ===
-
-def build_tester_crew(file_path: str) -> Crew:
-    """
-    Erillinen testaustiimi — vain testaaja_agentti, ilman DB-analyysia.
-    Kayta tata kun haluat testata Python-tiedostoa CrewAI:n kautta.
-    """
-    tehtava = Task(
-        description=(
-            f"Testaa tiedosto: {file_path}\n\n"
-            f"Kutsu test_file-tyokalua argumentilla '{file_path}'.\n"
-            "Se palauttaa valmiin markdown-raportin.\n"
-            "Tallenna raportti write_file-tyokalulla polkuun 'testitulokset.md'.\n"
-            "Yksi test_file-kutsu riittaa."
-        ),
-        expected_output=(
-            "Markdown-testitulokset tallennettuna tiedostoon "
-            "workspace/testitulokset.md."
-        ),
-        agent=testaaja_agentti,
-        output_file="agentti/workspace/testitulokset.md",
-    )
-
-    
-    return Crew(
-        agents=[manager, analyst, engineer],
-        tasks=[tehtava],
-        process=Process.sequential,
-        verbose=True,
-    )
-
+# === Crew ===
 
 def build_crew(task_description: str) -> Crew:
     """
@@ -174,35 +129,16 @@ def build_crew(task_description: str) -> Crew:
         agent=engineer,
     )
 
-    testaus_tehtava = Task(
-        description=(
-            "Testaa koodaajan kirjoittama tiedosto.\n"
-            "1. Kayta list_files-tyokalua loyytaaksesi uusimman .py-tiedoston.\n"
-            "2. Kutsu test_file-tyokalua loyytamallasi tiedostopolulla.\n"
-            "3. Tallenna saatu raportti write_file-tyokalulla "
-            "polkuun 'testitulokset.md'."
-        ),
-        expected_output=(
-            "Markdown-testitulokset tallennettuna "
-            "workspace/testitulokset.md-tiedostoon."
-        ),
-        agent=testaaja_agentti,
-        output_file="agentti/workspace/testitulokset.md",
-    )
 
     return Crew(
-        agents=[manager, analyst, engineer, testaaja_agentti],
-        tasks=[analyysi_tehtava, koodaus_tehtava, testaus_tehtava],
+        agents=[manager, analyst, engineer],
+        tasks=[analyysi_tehtava, koodaus_tehtava],
         process=Process.sequential,
         verbose=True,
     )
 
 
 # === Kaynistys ===
-
-# Avainsanat jotka reitittavat suoraan testausajoon (ilman LLM:aa)
-_TESTI_AVAINSANAT = ("testaa ", "testa ", "test ", "pytest", "pylint", "coverage")
-
 
 def main():
     """Paaohjelma: lukee tehtavan ja reittaa sen oikealle crewille."""
