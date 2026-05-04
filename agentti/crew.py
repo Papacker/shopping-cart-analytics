@@ -32,7 +32,6 @@ from tools import (
 # === LLM-konfiguraatio ===
 MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "qwen2.5-coder:14b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
-x
 
 llm = LLM(
     model=f"ollama/{MODEL_NAME}",
