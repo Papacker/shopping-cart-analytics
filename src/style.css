@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+/* Global Styles & Cyberpunk Background */
+html, body, [class*="css"] {
+    font-family: 'Outfit', "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif !important;
+    background-color: #05070a !important;
+    color: #e0e0e0;
+}
+
+.main {
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(247, 37, 133, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(76, 201, 240, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(114, 9, 183, 0.05) 0px, transparent 80%);
+}
+
+/* Headers - Explosive 3D Gradient with Global Glow */
+h1, h2, h3, [data-testid="stSidebar"] h2 {
+    background: linear-gradient(90deg, #f72585, #b5179e, #4cc9f0, #f72585);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    letter-spacing: -1px;
+    animation: shine 5s linear infinite;
+    text-shadow: 0 0 15px rgba(247, 37, 133, 0.2);
+}
+
+h1 { font-size: 3rem !important; }
+h2 { font-size: 2.2rem !important; }
+
+@keyframes shine {
+    to { background-position: 200% center; }
+}
+
+/* Metrics - Ultra Glassmorphism with Animated Border */
+div[data-testid="metric-container"] {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+div[data-testid="metric-container"]::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg, transparent 70%, #f72585 100%);
+    animation: rotate 4s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+div[data-testid="metric-container"]:hover::before {
+    opacity: 0.3;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow: 0 20px 50px rgba(247, 37, 133, 0.4);
+    border-color: rgba(247, 37, 133, 0.8);
+    background: rgba(247, 37, 133, 0.04);
+}
+
+/* Metric Value - Ultimate Glow */
+div[data-testid="stMetricValue"] {
+    color: #fff !important;
+    text-shadow: 0 0 8px rgba(247, 37, 133, 1), 0 0 15px rgba(247, 37, 133, 0.6), 0 0 30px rgba(247, 37, 133, 0.3);
+    font-weight: 800 !important;
+    font-size: 2.5rem !important;
+    letter-spacing: -1px;
+}
+
+div[data-testid="stMetricLabel"] {
+    color: #4cc9f0 !important;
+    text-transform: uppercase;
+    font-size: 0.8rem !important;
+    letter-spacing: 2px;
+    font-weight: 600 !important;
+}
+
+h3 {
+    color: #f72585;
+    text-shadow: 0 0 10px rgba(247, 37, 133, 0.5);
+    border-left: 4px solid #f72585;
+    padding-left: 15px;
+    margin-top: 2.5rem;
+}
+
+/* Sidebar Styling */
+[data-testid="stSidebar"] {
+    background-color: #020305 !important;
+    border-right: 2px solid rgba(247, 37, 133, 0.3);
+}
+
+/* Dataframes - Cyber Table */
+div[data-testid="stDataFrame"] {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Alerts - All Neon Flavors */
+div.stInfo {
+    background: rgba(76, 201, 240, 0.05);
+    border: 1px solid rgba(76, 201, 240, 0.3);
+    color: #4cc9f0;
+    box-shadow: 0 0 15px rgba(76, 201, 240, 0.1);
+}
+
+div.stSuccess {
+    background: rgba(46, 204, 113, 0.05);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    color: #2ecc71;
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.1);
+}
+
+div.stWarning {
+    background: rgba(241, 196, 15, 0.05);
+    border: 1px solid rgba(241, 196, 15, 0.3);
+    color: #f1c40f;
+    box-shadow: 0 0 15px rgba(241, 196, 15, 0.1);
+}
+
+div.stError {
+    background: rgba(231, 76, 60, 0.05);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    color: #e74c3c;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.1);
+}
+
+/* Buttons - Explosive Pulse */
+.stButton>button {
+    background: linear-gradient(45deg, #f72585 0%, #7209b7 100%);
+    border: none;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+}
+
+.stButton>button:hover {
+    box-shadow: 0 0 25px rgba(247, 37, 133, 0.8);
+    transform: scale(1.05) rotate(-1deg);
+}
+
+/* Sliders & Selectboxes - Neon Accents */
+div[data-testid="stSlider"] > div {
+    color: #f72585 !important;
+}
+
+/* Tabs - Professional High-Tech */
+button[data-baseweb="tab"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 10px 20px !important;
+}
+
+button[aria-selected="true"] {
+    background: rgba(247, 37, 133, 0.1) !important;
+    border-bottom: 3px solid #f72585 !important;
+    color: #f72585 !important;
+}
+
+/* Custom Scrollbar - Neon Pink */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #05070a; }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(#f72585, #7209b7);
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover { background: #4cc9f0; }
+
+/* Code blocks and tooltips */
+code {
+    background: rgba(247, 37, 133, 0.1) !important;
+    color: #f72585 !important;
+    border: 1px solid rgba(247, 37, 133, 0.2);
+}
+
+/* Bold text glow */
+strong {
+    color: #4cc9f0;
+    text-shadow: 0 0 5px rgba(76, 201, 240, 0.5);
+}
