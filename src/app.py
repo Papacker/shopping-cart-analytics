@@ -2,136 +2,169 @@
 Streamlit App: Kaupan UWB-paikannusdata 
 """
 
+import os
 import sys
+import logging
+import warnings
+import multiprocessing
+
+# Vain pääprosessi lataa Streamlitin ja tekee UI-konfiguroinnit
+# Tämä estää lapsiprosesseja (ETL) lataamasta Streamlitiä ja antamasta varoituksia
+if multiprocessing.current_process().name == 'MainProcess':
+    import streamlit as st
+    st.set_page_config(
+        page_title="Tokmanni Järvenpää - Fleet Analytics",
+        page_icon="🛒",
+        layout="wide"
+    )
+    # Terminaalihygienia: Hiljennetään Streamlit täysin
+    os.environ["STREAMLIT_GLOBAL_LOG_LEVEL"] = "error"
+    logging.getLogger("streamlit.runtime.scriptrunner_utils").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
+else:
+    # Lapsiprosesseissa (workerit) emme halua Streamlitiä lainkaan
+    st = None
+
 from pathlib import Path
+import duckdb
 
 # 1. PROJEKTIN JUURI + MODUULIEN LUOTTAMUS
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# 2. MODUULIEN IMPORTIT 
-import streamlit as st
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import duckdb
-import pandas as pd
-
 # Repo-moduulit
 from config.store_config import store_config
 from main import run_etl
 from scripts.reset_env import reset_env
+from src.queries import get_table_counts, DB_PATH
+
+# Välilehdet
+from src.tabs.tab1_health import render_tab_health
+from src.tabs.tab2_traffic import render_tab_traffic
+from src.tabs.tab3_checkout import render_tab_checkout
+from src.tabs.tab4_dynamics import render_tab_dynamics
+from src.tabs.tab5_heatmap import render_tab_heatmap
+from src.tabs.tab6_advanced import render_tab_advanced
 
 # 3. KONFIGURAATIO & PROFIILIT
-DB_PATH = PROJECT_ROOT / "database" / "store.db"
-
-# Sallitaan profiilin vaihto lennosta
 PROFIILIT = store_config['geometry']['map_profiles']
 oletus_profiili = store_config['geometry']['active_profile']
 
-st.sidebar.subheader("🗺️ Kartan asetukset")
-valittu_avain = st.sidebar.selectbox(
-    "Valitse karttapohja", 
-    options=list(PROFIILIT.keys()),
-    index=list(PROFIILIT.keys()).index(oletus_profiili)
-)
+def main():
+    # 3. UI:N RAKENTAMINEN
+    st.title("🛒 Laitetaan parastamme — UWB-paikannusdata")
 
-profiili = PROFIILIT[valittu_avain]
-IMAGE_FILENAME = profiili['filename']
-IMAGE_PATH = PROJECT_ROOT / IMAGE_FILENAME
+    # Sidebar: Hallinta
+    st.sidebar.header("⚙️ Hallinta")
 
-CLEAN_TABLE = "Zone"
+    # ETL-nappi
+    if st.sidebar.button("🚀 Aja ETL-putki"):
+        with st.spinner("ETL-putki ajetaan..."):
+            try:
+                import importlib
+                import main
+                importlib.reload(main)
+                summary = main.run_etl()
+                if summary:
+                    if summary.get("status") == "already_processed":
+                        st.sidebar.info("ℹ️ Kaikki tiedostot on jo prosessoitu.")
+                    else:
+                        st.sidebar.success(f"✅ ETL valmis! ({summary['duration']:.1f}s)")
+                        with st.sidebar.expander("📊 Ajon yhteenveto", expanded=True):
+                            st.write(f"📁 Tiedostoja: {summary['new_files_processed']}")
+                            st.write(f"📝 Rivejä: {summary['total_raw_rows']:,}")
+                            st.write(f"✅ Hyväksytty: {summary['total_cleaned_rows']:,}")
+                            if summary["rejections"]:
+                                st.write("---")
+                                st.write("Hylkäykset:")
+                                for reason, count in summary["rejections"].items():
+                                    st.write(f"- {reason}: {count}")
+                    st.rerun()
+                else:
+                    st.sidebar.error("❌ ETL epäonnistui. Katso terminaali.")
+            except Exception as e:
+                st.sidebar.error(f"❌ Kriittinen virhe: {e}")
 
-def fetch_data(query):
-    """Suorittaa SQL-kyselyn turvallisesti ilman tiedostolukkoja."""
-    if not DB_PATH.exists():
-        return pd.DataFrame()
-    try:
-        with duckdb.connect(str(DB_PATH), read_only=True) as con:
-            return con.execute(query).df()
-    except Exception as e:
-        st.error(f"Tietokantavirhe: {e}")
-        return pd.DataFrame()
+    st.sidebar.divider()
 
-# 4. KÄYTTÖLIITTYMÄ
-st.set_page_config(page_title="UWB laitetaan parastamme", layout="wide")
-st.title("🛒 Laitetaan parastamme - UWB-paikannnusdata")
+    st.sidebar.subheader("🗺️ Kartan asetukset")
+    valittu_avain = st.sidebar.selectbox(
+        "Valitse karttapohja",
+        options=list(PROFIILIT.keys()),
+        index=list(PROFIILIT.keys()).index(oletus_profiili)
+    )
+    profiili = PROFIILIT[valittu_avain]
+    IMAGE_PATH = PROJECT_ROOT / profiili['filename']
 
-# SIDEBAR
-st.sidebar.header("⚙️ Hallinta")
+    st.sidebar.divider()
+    st.sidebar.subheader("Vaaralliset toiminnot")
+    varmistus = st.sidebar.checkbox("Salli tietokannan poisto")
+    if st.sidebar.button("🗑️ Tyhjennä tietokanta", disabled=not varmistus):
+        with st.spinner("Nollataan ympäristö..."):
+            try:
+                reset_env()
+                st.sidebar.success("✅ Ympäristö tyhjennetty!")
+                st.cache_data.clear()
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"Poisto epäonnistui: {e}")
 
-# 1. AJA ETL
-if st.sidebar.button("🚀 Aja ETL-putki"):
-    with st.spinner("ETL-putki ajetaan..."):
-        try:
-            run_etl()
-            st.sidebar.success("✅ ETL valmis!")
-            st.rerun()
-        except Exception as e:
-            st.sidebar.error(f"❌ Virhe: {e}")
-st.sidebar.divider() # Selkeyden vuoksi
+    # --- DATAN LATAUS ---
+    st.header("Tietokannan tila")
 
-# 2. TYHJENNYS 
-st.sidebar.subheader("Vaaralliset toiminnot")
-varmistus = st.sidebar.checkbox("Salli tietokannan poisto")
-if st.sidebar.button("🗑️ Tyhjennä tietokanta", disabled=not varmistus):
-    try:
-        # Pakotetaan DuckDB sulkemaan kaikki yhteydet ennen poistoa
-        duckdb.connect().close() 
-        
-        reset_env()
-        st.sidebar.success("✅ Ympäristö tyhjennetty!")
-        st.rerun()
-    except Exception as e:
-        st.sidebar.error(f"Poisto epäonnistui: {e}")
+    counts = get_table_counts()
+    if counts:
+        if 'Visit' in counts:
+            st.success(f"✅ Tietokanta olemassa ({len(counts)} taulua)")
+            cols = st.columns(len(counts))
+            for i, (table, count) in enumerate(counts.items()):
+                cols[i].metric(table, f"{count:,}")
+        else:
+            st.warning("⚠️ Tietokanta on olemassa, mutta tauluja ei löytynyt. Aja ETL.")
+    else:
+        st.warning("⚠️ Tietokantaa ei ole — aja ETL ensin")
+        st.stop()
 
-# KUVAN NÄYTTÖ 
-st.header("🗺️ Kaupan pohjakuva")
+    st.divider()
 
-if not IMAGE_PATH.exists():
-    st.error(f"⚠️ Kuvaa ei löydy: {IMAGE_PATH}")
-else:
-    img = mpimg.imread(str(IMAGE_PATH))
-    fig, ax = plt.subplots(figsize=(15, 8))
-    ax.imshow(img)
-    ax.set_title("Kaupan pohjakuva", fontsize=14)
-    ax.axis("off")
-    st.pyplot(fig)
-    
-    # Lisätietoa
-    c1, c2, c3 = st.columns(3)
-    c1.text(f"Tiedosto: {IMAGE_FILENAME}")
-    c2.text(f"Koko: {img.shape[1]} x {img.shape[0]} px")
-    c3.text(f"Skaala: {profiili['scale_cm_per_px']} cm/px")
+    # --- ANALYTIIKKA-OSIO ---
+    st.header("Liiketoiminta-analytiikka")
 
-    
-
-#  TIETOKANNAN TILA
-st.header("📊 Tietokannan tila")
-
-if DB_PATH.exists():
-    con = duckdb.connect(str(DB_PATH), read_only=True)
-    tables = con.execute("SHOW TABLES").fetchall()
-    st.success(f"✅ Tietokanta olemassa ({len(tables)} taulua)")
-    
-    for t in tables:
-        table_name = t[0]
-        count = con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
-        st.text(f"  • {table_name}: {count:,} riviä")
-    con.close()
-else:
-    st.warning("⚠️ Tietokantaa ei ole (ajaa ETL ensin)")
-
-# =============================================================================
-# 5. LIIKETOIMINTA-ANALYTIIKKA
-# =============================================================================
-st.divider()
-st.header("📈 Liiketoiminta-analytiikka")
-
-if DB_PATH.exists():
-    # Luodaan välilehdet valmiiksi, mutta täytetään nyt vain ensimmäinen
-    tab_heatmap, tab_time, tab_queue = st.tabs([
-        "🔥 Ruuhkat heatmap",
-        "⏰ Aika-analyysi", 
-        "💸 Kassa ja Jonot"
+    tab_health, tab_traffic, tab_checkout, tab_dynamics, tab_heatmap, tab_advanced = st.tabs([
+        "🏥 Datan laatu", 
+        "🚶 Liikennevirrat", 
+        "🏪 Osastoanalyysi", 
+        "🛒 Kärrydynamiikka", 
+        "🔥 Heatmap",
+        "🧠 Advanced insights"
     ])
+
+    with tab_health:
+        render_tab_health()
+
+    with tab_traffic:
+        render_tab_traffic()
+
+    with tab_checkout:
+        render_tab_checkout()
+
+    with tab_dynamics:
+        render_tab_dynamics()
+
+    with tab_heatmap:
+        render_tab_heatmap(IMAGE_PATH, profiili, valittu_avain)
+
+    with tab_advanced:
+        render_tab_advanced()
+
+# --- ENTRY POINT ---
+if st is not None:
+    # --- Custom Premium CSS ---
+    try:
+        with open(PROJECT_ROOT / "src" / "style.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
+    
+    main()

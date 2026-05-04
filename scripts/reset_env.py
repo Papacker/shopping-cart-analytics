@@ -1,17 +1,13 @@
 import os
 import glob
 from pathlib import Path
-import streamlit as st
 
 def reset_env():
     # 1. POLUT
-    # Oletetaan, että skripti on projektin juuressa tai scripts-kansiossa
     BASE_DIR = Path(__file__).parent.parent
     DB_PATH = BASE_DIR / "database" / "store.db"
     PROCESSED_DIR = BASE_DIR / "data" / "processed"
 
-    st.info("🧹 Käynnistetään ympäristön nollaus...")
-    
     print("🧹 Käynnistetään ympäristön nollaus...")
     print("-" * 40)
 
@@ -25,15 +21,12 @@ def reset_env():
     else:
         print(f"ℹ️ Tietokantaa ei löytynyt (jo valmiiksi puhdas).")
 
-    # 3. PROSESSOIDUN DATAN POISTO (Parquet & CSV)
+    # 3. PROSESSOIDUN DATAN POISTO
     if PROCESSED_DIR.exists():
-        # Etsitään kaikki tiedostot processed-kansiosta
         processed_files = glob.glob(str(PROCESSED_DIR / "*"))
-        
         deleted_count = 0
         for f in processed_files:
             try:
-                # Poistetaan vain tiedostot ja linkit, ei alikansioita
                 if os.path.isfile(f) or os.path.islink(f):
                     os.remove(f)
                     deleted_count += 1
