@@ -34,19 +34,20 @@ def initialize_database(db_path, schema_path):
             print(f"⚠️ Tietokannan alustus herjaa (voi johtua lukituksesta): {e}")
 
 
-def process_file_task(file_path, config, df_categories):
+def process_file_task(file_path, config, df_categories, processed_dir):
     """
     Yksittäisen tiedoston käsittelylogiikka rinnakkaisajoa varten.
     Suoritetaan omassa prosessissaan.
     """
     file_name = os.path.basename(file_path)
     cleaner = StoreDataCleaner(config)
+    processed_dir = Path(processed_dir)
     
     try:
         # 1. LUKU (Käytetään in-memory DuckDB:tä nopeaan lukemiseen)
         con_mem = duckdb.connect()
         con_mem.execute("SET enable_progress_bar = false") # Terminaalihygienia
-        con_mem.execute("SET threads = 2") # Rajoitetaan säikeet per prosessi
+        con_mem.execute("SET threads = 4") # Rajoitetaan säikeet per prosessi
         df_raw = con_mem.execute(f"SELECT * FROM read_csv_auto('{file_path}')").df()
         file_raw_count = len(df_raw)
         con_mem.close()
@@ -63,6 +64,11 @@ def process_file_task(file_path, config, df_categories):
         # Lasketaan osastovierailut
         df_zone_visits = cleaner.calculate_zone_visits(df_final, df_categories)
         
+        # 3. TALLENNUS (Tehdään rinnakkain tässä prosessissa)
+        if not df_final.empty:
+            parquet_path = processed_dir / file_name.replace('.csv', '.parquet')
+            df_final.to_parquet(parquet_path, index=False)
+
         # Kerätään hylkäyssyyt tilastointia varten
         rejections = {}
         if not quality_logs.empty:
@@ -136,11 +142,11 @@ def run_etl():
             # Jos taulua ei ole vielä olemassa, sekin tarkoittaa että pitää ajaa
             raw_files = all_files
 
-    num_workers = min(len(raw_files), os.cpu_count(), 32)
+    num_workers = min(len(raw_files), os.cpu_count(), 8)
     if num_workers < 1:
         num_workers = 1
 
-    print(f"🚀 Aloitetaan rinnakkaisajo: {len(raw_files)} tiedostoa, {num_workers} prosessia käytössä (max {os.cpu_count()} ydintä)...", flush=True)
+    print(f"🚀 Aloitetaan rinnakkaisajo (spawn): {len(raw_files)} tiedostoa, {num_workers} prosessia käytössä...", flush=True)
 
     # Kerätään kaikki tulokset listoihin ennen tallennusta
     all_df_final = []
@@ -156,8 +162,11 @@ def run_etl():
     }
 
     # 3. RINNAKKAISLASKENTA (CPU-intensiivinen osuus)
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = [executor.submit(process_file_task, f, store_config, df_categories) for f in raw_files]
+    import multiprocessing
+    ctx = multiprocessing.get_context('spawn')
+    
+    with ProcessPoolExecutor(max_workers=num_workers, mp_context=ctx) as executor:
+        futures = [executor.submit(process_file_task, f, store_config, df_categories, str(PROCESSED_DIR)) for f in raw_files]
         
         for future in futures:
             try:
@@ -175,9 +184,6 @@ def run_etl():
             # Kerätään dataframet listoihin
             if not result["df_final"].empty:
                 all_df_final.append(result["df_final"])
-                # Tallennetaan Parquet heti (ei lukitse tietokantaa)
-                parquet_path = PROCESSED_DIR / file_name.replace('.csv', '.parquet')
-                result["df_final"].to_parquet(parquet_path, index=False)
             
             if not result["visit_metrics"].empty:
                 all_visit_metrics.append(result["visit_metrics"])
@@ -196,7 +202,12 @@ def run_etl():
                 summary_stats["rejections"][reason] = summary_stats["rejections"].get(reason, 0) + count
             
             print(f"⏳ Prosessoitu: {file_name}", flush=True)
-        print() # Newline rinnakkaisajon jälkeen
+            print(f"   📊 Rivejä: {result['raw_count']:,} -> {result['cleaned_count']:,}", flush=True)
+            print(f"   🛒 Visit: {len(result['visit_metrics'])} | 📍 ZoneVisit: {len(result['df_zone_visits'])}", flush=True)
+            if result.get("rejections"):
+                rej_str = ", ".join([f"{k}: {v} kpl" for k, v in result["rejections"].items()])
+                print(f"   ⚠️ Hylätyt: {rej_str}", flush=True)
+            print("-" * 30, flush=True)
 
     # 4. ATOMINEN TALLENNUS (Vain yksi lyhyt tietokantalukko lopuksi)
     if summary_stats["new_files_processed"] > 0:
@@ -269,7 +280,7 @@ def run_etl():
     
     if summary_stats["rejections"]:
         print("-" * 45)
-        print("Hylkäyssyyt (Sessiot):")
+        print("Hylkäyssyyt (Sessiot yhteensä):")
         for reason, count in summary_stats["rejections"].items():
             print(f"  • {reason:25}: {count} kpl")
     print("="*45 + "\n")
@@ -278,4 +289,10 @@ def run_etl():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    # 'spawn' on vakaampi DuckDB:n kanssa Linuxilla
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass
     run_etl()

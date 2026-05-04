@@ -10,8 +10,8 @@ store_config = {
                 "width_px": 1222,
                 "height_px": 567,
                 "scale_cm_per_px": 9.17,
-                "origin_x_px": 87.2,
-                "origin_y_px": 0.0,
+                "origin_x_px": -30.0,   # Siirretty vasemmalle (oli 50) jotta täsmää hyllyihin
+                "origin_y_px": 20.0,
                 "invert_y": True
             },
             "osasto": {
@@ -19,17 +19,17 @@ store_config = {
                 "width_px": 1222,
                 "height_px": 567,
                 "scale_cm_per_px": 9.17,
-                "origin_x_px": 87.2,
-                "origin_y_px": 0.0,
+                "origin_x_px": 50.0,    # Tämä on käyttäjän mukaan "täydellinen"
+                "origin_y_px": 20.0,
                 "invert_y": True
             },
             "kauppa2": {
                 "filename": "kauppa2.jpg",
                 "width_px": 1428,
                 "height_px": 722,
-                "scale_cm_per_px": 8.15, 
-                "origin_x_px": 121.0, 
-                "origin_y_px": 25.0,  
+                "scale_cm_per_px": 6.2,  # Pienennetty jotta heatmap on vielä "isompi"
+                "origin_x_px": 60.0,     # Säädetty kauppa2:n valkoisten marginaalien mukaan
+                "origin_y_px": 40.0,     # Säädetty pystysuunnan mukaan
                 "invert_y": True
             },
         },
@@ -93,10 +93,10 @@ store_config = {
         "gap_threshold_s": 300,
         "min_points": 50,
         "min_dist_m": 50.0,
-        "max_dist_m": 5000.0,
-        "min_time_s": 120,
+        "max_dist_m": 10000.0,
+        "min_time_s": 60,
         "max_time_s": 5400,
-        "min_store_penetration_x": 500
+        "min_store_penetration_x": 1500
     },
 
     # --- Liikesuodattimet: Sensorikohinan ja hyppyjen siivous ---
@@ -113,4 +113,4 @@ store_config = {
     }
 }
 
-print("✅ Tiukennetut asetukset ladattu")
+# Konfiguraatio ladattu
