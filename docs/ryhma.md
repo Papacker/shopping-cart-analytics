@@ -22,3 +22,5 @@ Ryhmän sisällä vaihtuu viikoittan Scrum menetelmän roolitukset.
 | Sprint 4| Kehitystiimin jäsen | Kehitystiimin jäsen | Scrummaster | - | Tuoteomistaja |
 | Sprint 5 | Tuoteomistaja | Kehitystiimin jäsen | Scrummaster | - | Kehitystiimin jäsen |
 | Sprint 6 | Kehitystiimin jäsen | Scrummaster | Kehitystiimin jäsen | - | Tuoteomistaja|
+| Sprint 7 | Scrummaster | Kehitystiimin jäsen | Tuoteomistaja | - | Kehitystiimin jäsen|
+| Sprint 8 | Kehitystiimin jäsen | Tuoteomistaja | Kehitystiimin jäsen | - | Scrummaster|
