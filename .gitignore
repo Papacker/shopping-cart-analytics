@@ -1,6 +1,7 @@
 # Data
 data/raw/*.csv
 data/processed/*.parquet
+home/
 
 # Virtuaaliympäristöt
 .venv/
