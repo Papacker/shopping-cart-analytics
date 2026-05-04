@@ -14,6 +14,7 @@ import seaborn as sns
 current_file = Path(__file__).resolve()
 project_root = current_file.parent.parent
 env_path = project_root / ".env"
+load_dotenv(dotenv_path=env_path)
 
 # Lisätään polku, jotta tools-kansio löytyy varmasti
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,47 +48,49 @@ pm_tools = [query_duckdb, inspect_schema]
 data_tools = [query_duckdb, inspect_schema, list_files, read_file, write_file]
 code_tools = [run_python, run_shell, read_file, write_file, list_files]
 
-# 1. THE STRATEGIC LEADER
+# 1. ANALYYSIPAALLIKKO
 manager = Agent(
-    role="UWB Analysis Manager",
-    goal="Orchestrate the analysis process to identify shopping cart patterns and store bottlenecks.",
+    role="Kauppa-analyysin johtaja",
+    goal="Koordinoi analyysitiimia ja varmista etta kaupan kayntidatasta saadaan selkeita oivalluksia.",
     backstory=(
-        "You are the strategic lead. You MUST use 'inspect_schema' first to understand the data structure. "
-        "You then share the relevant table and column names with the Analyst and Engineer. "
-        "Your focus is on ensuring the workflow leads to actionable insights about customer flows."
+        "Olet analyysipaallikko joka johtaa kauppadatan tutkimista. "
+        "Kaupassa seurataan ostoskaryjen liikkeita UWB-paikannuksella. "
+        "Kaytat query_duckdb-tyokalua SQL-kyselyihin ja raportoit tulokset suomeksi."
     ),
     llm=llm,
     tools=pm_tools,
     verbose=True,
-    allow_delegation=True # Essential for hierarchical logic
+    max_iter=5,
+    allow_delegation=True
 )
 
-# 2. THE DATA MINER
+# 2. DATA-ANALYYTIKKO
 analyst = Agent(
-    role="Data Discovery Analyst",
-    goal="Extract and aggregate UWB positioning data from DuckDB for specific store zones.",
+    role="Kauppadatan analyytikko",
+    goal="Tutki kaupan kayntidataa SQL-kyselyilla ja laadi selkea raportti suomeksi.",
     backstory=(
-        "You are an expert in SQL. You receive the schema information from the Manager and "
-        "perform complex queries to calculate session durations"
-        "You provide structured data for the Python Engineer."
+        "Olet SQL-asiantuntija joka tutkii kaupan ostoskaryjen kayntidataa. "
+        "Tietokannassa seurataan ostoskaryjen (ShoppingCart) reitteja kaupassa (Visit, Zone). "
+        "Kaytat query_duckdb-tyokalua kyselyihin ja write_file-tyokalua raportin tallentamiseen."
     ),
     llm=llm,
-    tools=data_tools, 
+    tools=data_tools,
     verbose=True,
-    max_iter=3,
+    max_iter=5,
 )
-# 3. THE VISUALIZATION ENGINEER
+# 3. VISUALISOIJA
 engineer = Agent(
-    role="Python Visualization Engineer",
-    goal="Create high-quality heatmaps and flow diagrams from the analyzed data.",
+    role="Python-visualisoija",
+    goal="Luo selkeita kaavioita ja heatmappeja kaupan kayntidatasta.",
     backstory=(
-        "You use Pandas, Matplotlib, and Seaborn to transform data into visual heatmaps. "
-        "You focus on visualizing checkout congestion and department-specific bottlenecks. "
-        "You save all outputs to the 'workspace' folder."
+        "Olet Python-kehittaja joka kayttaa Pandas, Matplotlib ja Seaborn -kirjastoja. "
+        "Visualisoit ostoskaryjen reitteja ja kaupan alueita heatmappeina. "
+        "Tallennat tulokset workspace-kansioon."
     ),
     llm=llm,
     tools=code_tools,
-    verbose=True
+    verbose=True,
+    max_iter=5,
 )
 
 liiketoiminta_agentti = Agent(
@@ -102,38 +105,89 @@ liiketoiminta_agentti = Agent(
 
 def build_crew(task_description: str) -> Crew:
     """
-    Taysi analyysitiimi: projektipaallikko, analyytikko, koodaaja, testaaja.
-    Kayta tata tietokanta-analyysi- ja koodaustehtaviin.
+    Kauppadatan analyysicrew: analyytikko tutkii kayntidatan ja kirjoittaa raportin suomeksi.
     """
+    db_path = str(project_root / "database" / "store.db")
+    output_path = str(project_root / "agentti" / "workspace" / "raportti.md")
+
+    # Valmiiksi testatut SQL-kyselyt — agentti ajaa nämä sellaisenaan
+    sql_kaynteja_per_karry = (
+        "SELECT sc.description, COUNT(v.visit_id) AS kaynteja, "
+        "ROUND(AVG(v.duration_seconds) / 60, 1) AS keski_kesto_min "
+        "FROM Visit v "
+        "JOIN ShoppingCart sc ON v.node_id = sc.node_id "
+        "GROUP BY sc.description "
+        "ORDER BY kaynteja DESC"
+    )
+    sql_kaynteja_per_paiva = (
+        "SELECT CAST(start_time AS DATE) AS paiva, COUNT(*) AS kaynteja "
+        "FROM Visit "
+        "GROUP BY CAST(start_time AS DATE) "
+        "ORDER BY paiva"
+    )
+    sql_pisimmat = (
+        "SELECT sc.description, ROUND(MAX(v.duration_seconds) / 60.0, 1) AS pisin_min "
+        "FROM Visit v "
+        "JOIN ShoppingCart sc ON v.node_id = sc.node_id "
+        "GROUP BY sc.description "
+        "ORDER BY pisin_min DESC "
+        "LIMIT 5"
+    )
+
     analyysi_tehtava = Task(
         description=(
             f"TEHTAVA: {task_description}\n\n"
-            "OHJEET:\n"
-            "1. ALA etsi ./tmp tai ./temp hakemistoja.\n"
-            "2. Kayta heti 'inspect_schema'-tyokalua nahdaksesi taulut.\n"
-            "3. Suorita SQL-kyselyt ja anna selkea vastaus."
+            f"TIETOKANTA: {db_path}\n\n"
+            "KONTEKSTI: Kyseessa on KAUPPA jossa seurataan ostoskaryjen liikkeita.\n"
+            "Karry = ostoskarry, visit = yksi kauppakaynti, node_id = korryn tunniste.\n\n"
+            "AJA NAMAT KOLME SQL-KYSELYA TASSA JARJESTYKSESSA query_duckdb-tyokalulla.\n"
+            "TARKEA: Kayda kyselyt TASMALLLEEN alla olevassa muodossa, ala muuta niita:\n\n"
+            f"KYSELY 1 - Kaynteja per karry:\n{sql_kaynteja_per_karry}\n\n"
+            f"KYSELY 2 - Kaynteja per paiva:\n{sql_kaynteja_per_paiva}\n\n"
+            f"KYSELY 3 - Pisimmat kayntiajat:\n{sql_pisimmat}\n\n"
+            "Kun olet ajanut kyselyt, kirjoita tuloksista markdown-raportti SUOMEKSI.\n"
+            f"Tallenna raportti write_file-tyokalulla polkuun: {output_path}"
         ),
-        expected_output="Selkea vastaus tai analyysiraportti tietokannan perusteella.",
-        agent=manager,
-        output_file="agentti/workspace/raportti.md",
-    )
-
-    koodaus_tehtava = Task(
-        description=(
-            "Kirjoita Python-koodi jonka projektipaallikko tai analyytikko tilasi. "
-            "Tallenna valmis koodi workspace-kansioon write_file-tyokalulla. "
-            "Anna koodatulle tiedostolle kuvaava nimi, esim. 'analyysi.py'."
+        expected_output=(
+            "Markdown-raportti suomeksi jossa on:\n"
+            "- # Kaupan käyntiraportti -otsikko\n"
+            "- Taulukko: ostoskarry | käyntejä | keski kesto (min)\n"
+            "- Käyntejä per päivä -taulukko\n"
+            "- Yhteenveto: mitkä kärrit tekevät eniten kauppakäyntejä"
         ),
-        expected_output="Valmis Python-tiedosto workspace-kansiossa.",
-        agent=engineer,
+        agent=analyst,
+        output_file=output_path,
     )
-
 
     return Crew(
-        agents=[manager, analyst, engineer],
-        tasks=[analyysi_tehtava, koodaus_tehtava],
+        agents=[analyst],
+        tasks=[analyysi_tehtava],
         process=Process.sequential,
         verbose=True,
+    )
+
+
+# === Testausapu ===
+
+
+_TESTI_AVAINSANAT = ["testaa", "test ", "aja testit", "run tests"]
+TESTER_WORKSPACE = Path(current_dir) / "workspace"
+
+
+def _run_test_file(file_path: str) -> str:
+    """Ajaa pytest-testit annetulle tiedostolle ja palauttaa raportin markdown-muodossa."""
+    import subprocess  # pylint: disable=import-outside-toplevel
+    cmd = [
+        "python", "-m", "pytest", file_path,
+        "-v", "--tb=short", "--no-header"
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    output = proc.stdout + proc.stderr
+    status = "✅ PASS" if proc.returncode == 0 else "❌ FAIL"
+    return (
+        f"# Testitulokset: `{file_path}`\n\n"
+        f"**Tila:** {status}\n\n"
+        f"```\n{output.strip()}\n```\n"
     )
 
 
@@ -180,7 +234,7 @@ def main():
             result = crew.kickoff()
             print("\n" + "=" * 60)
             print("LOPPUTULOS:")
-            print(result)
+            print(result.raw)
             print("=" * 60)
         except (RuntimeError, ValueError, OSError) as e:
             print(f"[VIRHE] {e}")
