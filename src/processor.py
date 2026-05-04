@@ -6,6 +6,7 @@ import numpy as np
 class StoreDataCleaner:
     """
     Vastaa UWB-paikannusdatan puhdistuksesta, sessioinnista ja validoinnista.
+    Noudattaa PEP8-standardia.
     """
 
     def __init__(self, config):
@@ -191,6 +192,7 @@ class StoreDataCleaner:
             return pd.DataFrame(columns=['visit_id', 'category_id', 'start_time', 'end_time'])
             
         con = duckdb.connect()
+        con.execute("SET threads = 2")
         con.register('df_work_local', df[['final_sid', 'x', 'y', 'timestamp']])
         con.register('df_categories_local', df_categories)
         
