@@ -46,6 +46,7 @@ def process_file_task(file_path, config, df_categories):
         # 1. LUKU (Käytetään in-memory DuckDB:tä nopeaan lukemiseen)
         con_mem = duckdb.connect()
         con_mem.execute("SET enable_progress_bar = false") # Terminaalihygienia
+        con_mem.execute("SET threads = 2") # Rajoitetaan säikeet per prosessi
         df_raw = con_mem.execute(f"SELECT * FROM read_csv_auto('{file_path}')").df()
         file_raw_count = len(df_raw)
         con_mem.close()
@@ -135,7 +136,11 @@ def run_etl():
             # Jos taulua ei ole vielä olemassa, sekin tarkoittaa että pitää ajaa
             raw_files = all_files
 
-    print(f"🚀 Aloitetaan rinnakkaisajo: {len(raw_files)} tiedostoa, {os.cpu_count()} ydintä käytössä...", flush=True)
+    num_workers = min(len(raw_files), os.cpu_count(), 32)
+    if num_workers < 1:
+        num_workers = 1
+
+    print(f"🚀 Aloitetaan rinnakkaisajo: {len(raw_files)} tiedostoa, {num_workers} prosessia käytössä (max {os.cpu_count()} ydintä)...", flush=True)
 
     # Kerätään kaikki tulokset listoihin ennen tallennusta
     all_df_final = []
@@ -151,11 +156,15 @@ def run_etl():
     }
 
     # 3. RINNAKKAISLASKENTA (CPU-intensiivinen osuus)
-    with ProcessPoolExecutor() as executor:
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
         futures = [executor.submit(process_file_task, f, store_config, df_categories) for f in raw_files]
         
         for future in futures:
-            result = future.result()
+            try:
+                result = future.result()
+            except Exception as e:
+                print(f"❌ Kriittinen virhe prosessissa: {e}")
+                continue
             if result is None or "error" in result:
                 if result and "error" in result:
                     print(f"❌ Virhe tiedostossa {result['file_name']}: {result['error']}")
