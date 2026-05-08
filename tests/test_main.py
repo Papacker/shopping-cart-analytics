@@ -47,9 +47,11 @@ class TestMainETL(unittest.TestCase):
         # Import the function we want to test
         from main import initialize_database
         
-        # Initialize database connection
+        # Initialize database
+        initialize_database(self.test_db_path, schema_path)
+        
+        # Initialize database connection to check tables
         con = duckdb.connect(self.test_db_path)
-        initialize_database(con, schema_path)
         
         # Check if tables are created properly
         tables = con.execute("SHOW TABLES").fetchall()

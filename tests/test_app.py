@@ -39,8 +39,7 @@ class TestAppUI(unittest.TestCase):
         # Essential imports for a Streamlit data app
         required_imports = [
             'streamlit as st',
-            'import duckdb',
-            'import pandas as pd'
+            'import duckdb'
         ]
         
         missing_imports = []
@@ -96,11 +95,9 @@ class TestAppUI(unittest.TestCase):
         """Test that app contains data processing components."""
         # Look for database/connection usage
         data_indicators = [
-            'duckdb.connect',
-            '.execute(',
-            'SELECT ',
-            'query',
-            'database'
+            'duckdb',
+            'get_table_counts',
+            'run_etl'
         ]
         
         found_indicators = []

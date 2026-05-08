@@ -15,6 +15,7 @@ agentti/workspace/*.md
 **/__pycache__/
 *.py[cod]
 config/__init__.py
+.pytest_cache
 
 # LLM 
 .env
