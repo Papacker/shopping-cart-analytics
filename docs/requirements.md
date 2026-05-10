@@ -4,34 +4,50 @@
 
 # Projekti
 
-Projektin nimi: [TÄHÄN PROJEKTIN NIMI]
-Toimeksiantaja: [Yrityksen nimi]
-Tiimi: [Tiimin nimi / Numero]
-Kurssi: [Kurssin nimi / Numero]
+Projektin nimi: UWB-paikannustietojen ETL-prosessi, analysointi ja visualisointi käyttöliittymän kautta
+Toimeksiantaja: Jaakko Vanhala
+Tiimi: Laitetaan parastamme
+Kurssi: Dataprojekti 1, 2026 
 
 ## Tiimi ja Roolit
 
 Esitelkää tiimi ja miten kiertävä Scrum-malli toteutui käytännössä.
 
-| Jäsen | Sprint 1 | Sprint 2 |
-| -------- | -------- | -------- |
-| Opiskelija A | PO | Dev   |
+| Jäsen | Sprint 1 | Sprint 2 | Sprint 3 | Sprint 4 | Sprint 5 | Sprint 6 | Sprint 7 | Sprint 8 |
+| -------- | -------- | -------- |-------- |-------- |-------- |-------- |-------- |
+| Juhani Rautio | Scrummaster | PO  | Dev | Dev | PO | Dev | Scrummaster | Dev |
+| Teo Juurinen | PO | Scrummaster | Dev | Dev | Dev | Scrummaster | Dev | PO |
+| Mikko Valkealahti | Dev | Dev | PO | Scrummaster | Scrummaster | Dev | PO | Dev |
+| Suvi Niemi | Dev | Dev | Scrummaster | PO | Dev | PO | Dev | Scrummaster |
+| Jussi Seppänen | Dev | Dev | - | - | - | - | - | - |
 
 ## Ongelma ja Ratkaisu (Business Case)
 Mitä yritys pyysi ja mitä teitte?
 
-* Toimeksianto: Lyhyt kuvaus yrityksen haasteesta.
-* Ratkaisun tavoite: Miten tekoäly/data-analyysi auttaa tässä haasteessa?
+* Toimeksianto: Kauppias on kerännyt dataa ostoskärryjen liikkeistä myymälässä UWB-teknologian avulla, mutta ei ole varma mihin sitä pitäisi käyttää.
+* Ratkaisun tavoite: Datan analysointi ja visualisointi siten, että se auttaa kauppiasta ymmärtämään paremmin ostoskärryjen käyttäjien liikkumista myymälässä ja tekemään parempia päätöksiä liiketoiminnassaan. Tavoitteena on luoda työkalu, joka on helppokäyttöinen ja joka auttaa kauppiasta ymmärtämään asiakkaiden käyttäytymistä myymälässä.
 * MVP: Mikä on tämänhetkisen prototyypin tärkein ominaisuus?
+Tavoitteen kannalta olennaisen datan visualisointi luonnollisella kielellä esitettyjen kyselyjen perusteella sekä suositukset datan hyödyntämiseksi. 
 
 ## Tekninen Toteutus (Pipeline)
 Miten data liikkui ja mitä sille tapahtui?
 
 Data-arkkitehtuuri:
-* Datan keruu: (Mistä data tuli? API, CSV, SQL?)
+* Datan keruu: Raakadata on tallennettuna kärrykohtaisiin csv-tiedostoihin. Tiedostoja on 31 kpl ja ne on tallennettu koulun palvelimelle.
 * Datan esikäsittely ja siivous (KRIITTINEN VAIHE):
-    * Miksi siivottiin? (Esim. puuttuvat arvot, virheelliset tyypit, outliers.)
-    * Mitä siivottiin? (Esim. "Poistimme 15% riveistä, joista puuttui hintatieto".)
+    * Miksi siivottiin? 
+    Tiedostoissa oli yhteensä noin 140 miljoonaa riviä, joten raakadatan käsittely olisi ollut erittäin hidasta. Yksi rivi sisälsi ostoskärryn paikannuskoordinaatit ja aikaleiman sekä Q- ja Z-arvon. Z-arvo kertoi paikannussignaalin korkeuden (kerros) ja Q-arvo laadun. Jotta datasta saatiin järkevä analysoitava kokonaisuus, joka vastaisi luotettavasti asiakaskäyttäytymistä, raakadatasta täytyi siivota pois epäoleelliset tiedot sekä mahdolliset virheet, jotta lopputulos olisi luotettava.  
+    * Mitä siivottiin? 
+    1. Q-arvo ja Z-arvosarakkeet. Q-arvolla ei ollut merkitystä, koska myymälä oli yhdessä kerroksessa. Z-arvon mittaristo ei puolestaan ollut tiedossa. 
+    2. Negatiiviset koordinaatit (x-koordinaatiston 0-linja = kassojen keskilinja, y-koordinaatiston 0 = vasen yläkulma)
+    3. Liikkeet dead zone -alueilla, koska myymälän ulkopuolisella datalla ei ollut liiketoiminnallista arvoa. 
+    4. Hajanaiset signaalit, jotka eivät muodostaneet ostossessiota eli alkaneet sisäänkäynniltä ja päättyneet kassalle.
+    5. Aukioloaikojen ulkopuoliset signaalit. 
+    6. Liian nopeat siirtymät
+    7. Sessiot, jotka jäivät myymälän sisällä alle 50 metrin pituisiksi. 
+    
+    Siivouksen jälkeen datasta noin 90 % oli epäoleellista tai virheellistä. Suurin osa epäoleellisesta datasta oli hajanaisia signaaleja, liian lyhyitä sessioita ja kohinaa. 
+
     * Millä siivottiin? (Esim. Pandas, NumPy, Regex.)
 * Datan validointi (Miten varmistimme, ettei validia dataa poistunut?):
     * Rivinmäärien vertailu: Tarkistimme shape-metodilla datamäärän ennen ja jälkeen jokaisen operaation.
@@ -40,11 +56,11 @@ Data-arkkitehtuuri:
     * Audit Trail: Kaikki raakadatasta tunnistetut trajektorit (istunnot) kirjataan joko Visit- (validit) tai Quality-tauluun (invalidit). Suppilokaavio visualisoi tämän prosessin läpinäkyvästi.
     * Yksikkötestit: Kirjoitimme testejä, jotka varmistivat, että tunnetusti validit testisyötteet läpäisevät filtterit.
 * AI-malli: (Mitä mallia tai malleja ja algoritmeja käytettiin ja miksi?)
-    * Missä niitä käytettiin?
+    * Missä niitä käytettiin
     * Miten validoitiin että hallusinaatiota ei esiinny?
     * Koulutettiinko omia malleja?
     * Käytettiinko jotain frameworkkeja?
-* Teknologiapino: Python, GitLab CI/CD, Pandas, Scikit-learn, NumPy, etc
+* Teknologiapino: Python, GitLab CI/CD, Pandas, NumPy, Matplotlib, Seaborn,DuckDB, CrewAi, Jupyterlab, Streamlit  
 
 
 
@@ -99,6 +115,7 @@ Mitä jäi käteen?
 ## Linkit
 
 GitLab Repositorio
+https://gitlab.dclabra.fi/ttm25sai/projekti1/projektiopinnot-1-datan-hallinta-laitetaan-parastamme
 Oppimispäiväkirjat
 
 © 202X [Tiimin Nimi] | Ammattikorkeakoulu | Insinöörikoulutus
