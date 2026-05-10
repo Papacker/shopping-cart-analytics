@@ -25,43 +25,42 @@ class StoreDataCleaner:
         """
         rows = []
         cat_id = 1
-        
+
         # Osastot
         for name, info in self.config['spatial_zones']['departments'].items():
             x1, x2, y1, y2 = info['coords']
             rows.append({'category_id': cat_id, 'name': name, 'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2})
             cat_id += 1
-            
+
         # Kassat
         for name, info in self.config['spatial_zones']['checkouts'].items():
             x1, x2, y1, y2 = info['coords']
             rows.append({'category_id': cat_id, 'name': name, 'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2})
             cat_id += 1
-            
+
         return pd.DataFrame(rows)
 
     def clean_spatial(self, df):
         """Poistaa koordinaatit, jotka ovat myymälän ulkopuolella tai dead zoneilla."""
-        initial_count = len(df)
         mask_bounds = (df['x'] >= 0) & (df['x'] <= self.geom['store_max_x_cm']) & \
                       (df['y'] >= 0) & (df['y'] <= self.geom['store_max_y_cm'])
-        
+
         # Dead zones hylkäykset
         rejected_points = df[~mask_bounds].copy()
         rejected_points['is_valid'] = False
         rejected_points['reason'] = 'OUT_OF_BOUNDS'
 
         df_in = df[mask_bounds].copy()
-        
+
         for name, coords in self.config['spatial_zones']['dead_zones'].items():
             x1, x2, y1, y2 = coords
             dz_mask = (df_in['x'] >= x1) & (df_in['x'] <= x2) & (df_in['y'] >= y1) & (df_in['y'] <= y2)
-            
+
             dz_points = df_in[dz_mask].copy()
             dz_points['is_valid'] = False
             dz_points['reason'] = f'DEAD_ZONE_{name.upper()}'
             rejected_points = pd.concat([rejected_points, dz_points])
-            
+
             df_in = df_in[~dz_mask]
 
         return df_in, rejected_points
@@ -82,12 +81,12 @@ class StoreDataCleaner:
         if df.empty:
             return df
         df = df.sort_values(['final_sid', 'timestamp'])
-        
+
         # Lasketaan aika ja matka metreinä
         df['dt_step'] = df.groupby('final_sid')['timestamp'].diff().dt.total_seconds()
         df['dx_m'] = df.groupby('final_sid')['x'].diff() / 100.0
         df['dy_m'] = df.groupby('final_sid')['y'].diff() / 100.0
-        
+
         # Nopeuslaskenta ja suodatus
         df['speed_ms'] = np.where(
             df['dt_step'].isna(),
@@ -98,10 +97,10 @@ class StoreDataCleaner:
                 999.0
             )
         )
-        
+
         max_speed = self.motion['max_jump_speed_ms']
         valid_points = df[(df['speed_ms'] <= max_speed) | df['speed_ms'].isna()].copy()
-        
+
         return valid_points.drop(columns=['dt_step', 'dx_m', 'dy_m', 'speed_ms'])
 
     def is_operational(self, timestamp):
@@ -122,7 +121,7 @@ class StoreDataCleaner:
 
         for sid, group in df.groupby('final_sid'):
             node_id = group['node_id'].iloc[0]
-            
+
             # TARKISTUS 1: Pistemäärä
             if len(group) < self.logic['min_points']:
                 quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'TOO_FEW_POINTS', 'more_info': f'pts: {len(group)}'})
@@ -140,11 +139,11 @@ class StoreDataCleaner:
             if duration_s > self.logic['max_time_s']:
                 quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'SESSION_TOO_LONG', 'more_info': f'min: {duration_s/60:.1f}'})
                 continue
-            
+
             if duration_s < self.logic['min_time_s']:
                 quality_records.append({'node_id': node_id, 'is_valid': False, 'reason': 'SESSION_TOO_SHORT', 'more_info': f'sec: {duration_s:.1f}'})
                 continue
-            
+
             # TARKISTUS 4: Läpäisy (kävikö myymälässä syvällä)
             penetration = group['x'].max()
             if penetration < self.logic['min_store_penetration_x']:
@@ -180,7 +179,7 @@ class StoreDataCleaner:
 
         if not valid_data:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(quality_records)
-            
+
         return pd.concat(valid_data), pd.DataFrame(stats), pd.DataFrame(quality_records)
 
     def calculate_zone_visits(self, df, df_categories):
@@ -190,47 +189,47 @@ class StoreDataCleaner:
         """
         if df.empty or df_categories.empty:
             return pd.DataFrame(columns=['visit_id', 'category_id', 'start_time', 'end_time'])
-            
+
         con = duckdb.connect()
         con.execute("SET threads = 2")
         con.register('df_work_local', df[['final_sid', 'x', 'y', 'timestamp']])
         con.register('df_categories_local', df_categories)
-        
+
         query = """
-            SELECT 
-                final_sid, 
-                timestamp, 
+            SELECT
+                final_sid,
+                timestamp,
                 FIRST(category_id) as category_id
             FROM df_work_local
-            JOIN df_categories_local ON 
-                df_work_local.x >= df_categories_local.x1 AND 
+            JOIN df_categories_local ON
+                df_work_local.x >= df_categories_local.x1 AND
                 df_work_local.x <= df_categories_local.x2 AND
-                df_work_local.y >= df_categories_local.y1 AND 
+                df_work_local.y >= df_categories_local.y1 AND
                 df_work_local.y <= df_categories_local.y2
             GROUP BY final_sid, timestamp
             ORDER BY final_sid, timestamp
         """
-        
+
         df_cats_raw = con.execute(query).df()
         con.close()
-        
+
         if df_cats_raw.empty:
             return pd.DataFrame(columns=['visit_id', 'category_id', 'start_time', 'end_time'])
-        
+
         df_cats = df_cats_raw
-        
+
         # Etsitään milloin kategoria vaihtuu (tai sessio vaihtuu)
         df_cats['cat_changed'] = (df_cats['category_id'] != df_cats['category_id'].shift()) | \
                                  (df_cats['final_sid'] != df_cats['final_sid'].shift())
-        
+
         df_cats['visit_group'] = df_cats['cat_changed'].cumsum()
-        
+
         # Aggregoidaan vierailut
         zone_visits = df_cats.groupby(['final_sid', 'visit_group', 'category_id']).agg(
             start_time=('timestamp', 'min'),
             end_time=('timestamp', 'max')
         ).reset_index()
-        
+
         zone_visits = zone_visits.rename(columns={'final_sid': 'visit_id'})
-        
+
         return zone_visits[['visit_id', 'category_id', 'start_time', 'end_time']]
