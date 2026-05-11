@@ -2,11 +2,9 @@
 
 import os
 import sys
-from dotenv import load_dotenv
 from pathlib import Path
-import pandas as pd
-import matplotlib as plt
-import seaborn as sns
+
+from dotenv import load_dotenv
 
 
 
@@ -20,6 +18,9 @@ load_dotenv(dotenv_path=env_path)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
+# Projektin juuri sys.pathiin jotta store_config löytyy
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # pylint: disable=wrong-import-position
 from crewai import LLM, Agent, Crew, Process, Task
@@ -28,10 +29,11 @@ from tools import (
     query_duckdb, inspect_schema,
     list_files, read_file, write_file,
 )
+from config.store_config import store_config  # pylint: disable=import-error
 
 
 # === LLM-konfiguraatio ===
-MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "qwen2.5-coder:14b")
+MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "llama3.1:8b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 
 llm = LLM(
@@ -44,7 +46,7 @@ llm = LLM(
 # === Agentit ===
 
 # Annetaan kaikille agenteille pääsy tietokantatyökaluihin, jotta kukaan ei hämmenny
-pm_tools = [query_duckdb, inspect_schema] 
+pm_tools = [query_duckdb, inspect_schema]
 data_tools = [query_duckdb, inspect_schema, list_files, read_file, write_file]
 code_tools = [run_python, run_shell, read_file, write_file, list_files]
 
@@ -101,59 +103,222 @@ liiketoiminta_agentti = Agent(
     tools=code_tools,
     verbose=True,
 )
+# === Konfigurointipohjaiset SQL-generaattorit ===
+
+def _build_department_sql() -> str:
+    """
+    Generoi osastoanalyysi-SQL dynaamisesti store_config.departments-maarityksista.
+    Kayttaa Zone-taulun koordinaatteja ja vertaa niita osastojen koordinaattilaatikoihin.
+    """
+    departments = store_config["spatial_zones"]["departments"]
+    cases = []
+    for name, dept in departments.items():
+        x_min, x_max, y_min, y_max = dept["coords"]
+        escaped = name.replace("'", "''")
+        cases.append(
+            f"        WHEN z.x BETWEEN {x_min} AND {x_max} "
+            f"AND z.y BETWEEN {y_min} AND {y_max} THEN '{escaped}'"
+        )
+    case_block = "\n".join(cases)
+    return (
+        "SELECT\n"
+        "    CASE\n"
+        f"{case_block}\n"
+        "        ELSE 'Muu / kaytava'\n"
+        "    END AS osasto,\n"
+        "    COUNT(DISTINCT z.visit_id) AS uniikkeja_kaynteja,\n"
+        "    COUNT(*) AS paikannuspisteet,\n"
+        "    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS osuus_pct\n"
+        "FROM Zone z\n"
+        "GROUP BY osasto\n"
+        "ORDER BY paikannuspisteet DESC"
+    )
+
+
+def _build_checkout_sql() -> str:
+    """
+    Generoi kassaruuhka-SQL dynaamisesti store_config.checkouts-maarityksista.
+    """
+    checkouts = store_config["spatial_zones"]["checkouts"]
+    cases = []
+    where_parts = []
+    for name, info in checkouts.items():
+        x_min, x_max, y_min, y_max = info["coords"]
+        escaped = name.replace("'", "''")
+        cases.append(
+            f"        WHEN z.x BETWEEN {x_min} AND {x_max} "
+            f"AND z.y BETWEEN {y_min} AND {y_max} THEN '{escaped}'"
+        )
+        where_parts.append(
+            f"(z.x BETWEEN {x_min} AND {x_max} AND z.y BETWEEN {y_min} AND {y_max})"
+        )
+    case_block = "\n".join(cases)
+    where_block = "\n    OR ".join(where_parts)
+    return (
+        "SELECT\n"
+        "    CASE\n"
+        f"{case_block}\n"
+        "    END AS kassa,\n"
+        "    COUNT(DISTINCT z.visit_id) AS kaynteja,\n"
+        "    COUNT(*) AS paikannuspisteet\n"
+        "FROM Zone z\n"
+        f"WHERE (\n    {where_block}\n)\n"
+        "GROUP BY kassa\n"
+        "ORDER BY paikannuspisteet DESC"
+    )
+
+
+# === Datan esihaku (luotettava Python-lahestymistapa) ===
+
+def _fetch_all_data(db_path: str) -> dict:
+    """
+    Hakee kaikki analyysidatat suoraan DuckDB:sta ennen agenttia.
+    Peruskyselyt ovat kovakoodattu tahan, osasto- ja kassakyselyt
+    generoidaan dynaamisesti store_config.py:sta.
+    """
+    try:
+        import duckdb  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return {"virhe": "duckdb ei ole asennettu"}
+
+    if not Path(db_path).exists():
+        return {"virhe": f"Tietokantaa ei loydy: {db_path}"}
+
+    queries: dict = {
+        "yleiskatsaus": (
+            "SELECT COUNT(DISTINCT visit_id) AS kaynteja_yhteensa, "
+            "COUNT(DISTINCT node_id) AS aktiivisia_karyja, "
+            "ROUND(AVG(duration_seconds)/60.0,1) AS keski_kesto_min, "
+            "ROUND(MIN(duration_seconds)/60.0,1) AS lyhin_min, "
+            "ROUND(MAX(duration_seconds)/60.0,1) AS pisin_min, "
+            "ROUND(SUM(duration_seconds)/3600.0,1) AS yhteisaika_h "
+            "FROM Visit"
+        ),
+        "kaynteja_per_karry": (
+            "SELECT sc.description AS karry, COUNT(v.visit_id) AS kaynteja, "
+            "ROUND(AVG(v.duration_seconds)/60.0,1) AS keski_min, "
+            "ROUND(MAX(v.duration_seconds)/60.0,1) AS pisin_min, "
+            "ROUND(SUM(v.duration_seconds)/3600.0,1) AS yht_h "
+            "FROM Visit v JOIN ShoppingCart sc ON v.node_id = sc.node_id "
+            "GROUP BY sc.description ORDER BY kaynteja DESC"
+        ),
+        "kaynteja_per_paiva": (
+            "SELECT CAST(start_time AS DATE) AS paiva, COUNT(*) AS kaynteja, "
+            "ROUND(AVG(duration_seconds)/60.0,1) AS keski_min "
+            "FROM Visit GROUP BY CAST(start_time AS DATE) ORDER BY paiva"
+        ),
+        "kaynteja_per_tunti": (
+            "SELECT CAST(EXTRACT(HOUR FROM start_time) AS INTEGER) AS tunti, "
+            "COUNT(*) AS kaynteja, ROUND(AVG(duration_seconds)/60.0,1) AS keski_min "
+            "FROM Visit GROUP BY tunti ORDER BY tunti"
+        ),
+        "kaynteja_per_viikonpaiva": (
+            "SELECT CASE EXTRACT(DOW FROM start_time) "
+            "WHEN 0 THEN '0 Sunnuntai' WHEN 1 THEN '1 Maanantai' "
+            "WHEN 2 THEN '2 Tiistai' WHEN 3 THEN '3 Keskiviikko' "
+            "WHEN 4 THEN '4 Torstai' WHEN 5 THEN '5 Perjantai' "
+            "WHEN 6 THEN '6 Lauantai' END AS viikonpaiva, "
+            "COUNT(*) AS kaynteja, ROUND(AVG(duration_seconds)/60.0,1) AS keski_min "
+            "FROM Visit GROUP BY viikonpaiva ORDER BY viikonpaiva"
+        ),
+        "kesto_luokat": (
+            "SELECT CASE WHEN duration_seconds < 600 THEN '1. alle 10 min' "
+            "WHEN duration_seconds < 1800 THEN '2. 10-30 min' "
+            "WHEN duration_seconds < 3600 THEN '3. 30-60 min' "
+            "WHEN duration_seconds < 7200 THEN '4. 1-2 tuntia' "
+            "ELSE '5. yli 2 tuntia' END AS kestoluokka, "
+            "COUNT(*) AS kaynteja, "
+            "ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS osuus_pct "
+            "FROM Visit GROUP BY kestoluokka ORDER BY kestoluokka"
+        ),
+        "laatu_syyt": (
+            "SELECT is_valid, reason, COUNT(*) AS maara, "
+            "ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS osuus_pct "
+            "FROM Quality GROUP BY is_valid, reason "
+            "ORDER BY is_valid DESC, maara DESC LIMIT 15"
+        ),
+        "zone_kattavuus": (
+            "SELECT ROUND(MIN(x),0) AS x_min, ROUND(MAX(x),0) AS x_max, "
+            "ROUND(MIN(y),0) AS y_min, ROUND(MAX(y),0) AS y_max, "
+            "COUNT(*) AS paikannuspisteet_yht, COUNT(DISTINCT visit_id) AS kaynneissa "
+            "FROM Zone"
+        ),
+        "top_pisin_yksittainen": (
+            "SELECT sc.description AS karry, "
+            "CAST(v.start_time AS DATE) AS paiva, "
+            "ROUND(v.duration_seconds / 60.0, 1) AS kesto_min "
+            "FROM Visit v JOIN ShoppingCart sc ON v.node_id = sc.node_id "
+            "ORDER BY v.duration_seconds DESC LIMIT 10"
+        ),
+        # Konfiguraatiopohjaiset kyselyt — generoidaan store_config.py:sta
+        "osastoanalyysi": _build_department_sql(),
+        "kassaruuhka": _build_checkout_sql(),
+    }
+
+    results: dict = {}
+    try:
+        con = duckdb.connect(db_path, read_only=True)
+        for name, sql in queries.items():
+            try:
+                df = con.execute(sql).fetchdf()
+                results[name] = df.to_string(index=False)
+            except Exception as exc:  # pylint: disable=broad-except
+                results[name] = f"[Virhe kyselyssa '{name}']: {exc}"
+        con.close()
+    except Exception as exc:  # pylint: disable=broad-except
+        results["yhteyden_virhe"] = str(exc)
+
+    return results
+
+
 # === Crew ===
 
 def build_crew(task_description: str) -> Crew:
     """
-    Kauppadatan analyysicrew: analyytikko tutkii kayntidatan ja kirjoittaa raportin suomeksi.
+    Kauppadatan analyysicrew: Python pre-hakee datan store_configin perusteella,
+    agentti kirjoittaa markdown-raportin valmiista datasta.
     """
     db_path = str(project_root / "database" / "store.db")
     output_path = str(project_root / "agentti" / "workspace" / "raportti.md")
 
-    # Valmiiksi testatut SQL-kyselyt — agentti ajaa nämä sellaisenaan
-    sql_kaynteja_per_karry = (
-        "SELECT sc.description, COUNT(v.visit_id) AS kaynteja, "
-        "ROUND(AVG(v.duration_seconds) / 60, 1) AS keski_kesto_min "
-        "FROM Visit v "
-        "JOIN ShoppingCart sc ON v.node_id = sc.node_id "
-        "GROUP BY sc.description "
-        "ORDER BY kaynteja DESC"
-    )
-    sql_kaynteja_per_paiva = (
-        "SELECT CAST(start_time AS DATE) AS paiva, COUNT(*) AS kaynteja "
-        "FROM Visit "
-        "GROUP BY CAST(start_time AS DATE) "
-        "ORDER BY paiva"
-    )
-    sql_pisimmat = (
-        "SELECT sc.description, ROUND(MAX(v.duration_seconds) / 60.0, 1) AS pisin_min "
-        "FROM Visit v "
-        "JOIN ShoppingCart sc ON v.node_id = sc.node_id "
-        "GROUP BY sc.description "
-        "ORDER BY pisin_min DESC "
-        "LIMIT 5"
-    )
+    print("\n[DATA] Haetaan tietokantadata ja generoidaan kyselyt store_configista...")
+    data = _fetch_all_data(db_path)
+
+    if "virhe" in data:
+        print(f"[VAROITUS] {data['virhe']}")
+        data_teksti = f"TIETOKANTAVIRHE: {data['virhe']}\n"
+    else:
+        data_teksti = "\n\n".join(
+            f"=== {nimi.upper().replace('_', ' ')} ===\n{tulos}"
+            for nimi, tulos in data.items()
+        )
+        print(f"[DATA] Haettu {len(data)} datasettia (osastot store_config.py:sta).")
+
+    dept_names = list(store_config["spatial_zones"]["departments"].keys())
+    dept_lista = ", ".join(dept_names[:6]) + f" ... ({len(dept_names)} osastoa)"
 
     analyysi_tehtava = Task(
         description=(
             f"TEHTAVA: {task_description}\n\n"
-            f"TIETOKANTA: {db_path}\n\n"
-            "KONTEKSTI: Kyseessa on KAUPPA jossa seurataan ostoskaryjen liikkeita.\n"
-            "Karry = ostoskarry, visit = yksi kauppakaynti, node_id = korryn tunniste.\n\n"
-            "AJA NAMAT KOLME SQL-KYSELYA TASSA JARJESTYKSESSA query_duckdb-tyokalulla.\n"
-            "TARKEA: Kayda kyselyt TASMALLLEEN alla olevassa muodossa, ala muuta niita:\n\n"
-            f"KYSELY 1 - Kaynteja per karry:\n{sql_kaynteja_per_karry}\n\n"
-            f"KYSELY 2 - Kaynteja per paiva:\n{sql_kaynteja_per_paiva}\n\n"
-            f"KYSELY 3 - Pisimmat kayntiajat:\n{sql_pisimmat}\n\n"
-            "Kun olet ajanut kyselyt, kirjoita tuloksista markdown-raportti SUOMEKSI.\n"
-            f"Tallenna raportti write_file-tyokalulla polkuun: {output_path}"
+            "KONTEKSTI: Kaupan ostoskaryjen UWB-paikannusdata.\n"
+            f"Kaupassa on {len(dept_names)} osastoa: {dept_lista}\n\n"
+            "ALLA ON VALMIIKSI HAETTU DATA — EI TARVITSE AJAA SQL:AA:\n\n"
+            f"{data_teksti}\n\n"
+            "KIRJOITA kattava markdown-raportti SUOMEKSI:\n"
+            "1. # Kaupan UWB-kayntiraportti\n"
+            "2. ## Yleiskatsaus\n"
+            "3. ## Kaynteja per ostoskarry\n"
+            "4. ## Aikasarjat (paiva, viikonpaiva, tunti)\n"
+            "5. ## Kayntiajat ja kestoluokat\n"
+            "6. ## Osastoanalyysi (store_configin osastot)\n"
+            "7. ## Kassaruuhka\n"
+            "8. ## Datan laatu\n"
+            "9. ## Yhteenveto\n\n"
+            f"Tallenna write_file-tyokalulla: {output_path}"
         ),
         expected_output=(
-            "Markdown-raportti suomeksi jossa on:\n"
-            "- # Kaupan käyntiraportti -otsikko\n"
-            "- Taulukko: ostoskarry | käyntejä | keski kesto (min)\n"
-            "- Käyntejä per päivä -taulukko\n"
-            "- Yhteenveto: mitkä kärrit tekevät eniten kauppakäyntejä"
+            "Kattava markdown-raportti suomeksi, 9 osaa, "
+            "taulukot | col | col | muodossa."
         ),
         agent=analyst,
         output_file=output_path,
@@ -165,6 +330,8 @@ def build_crew(task_description: str) -> Crew:
         process=Process.sequential,
         verbose=True,
     )
+
+
 
 
 # === Testausapu ===

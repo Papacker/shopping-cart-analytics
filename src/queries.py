@@ -1,7 +1,5 @@
 import pandas as pd
 import duckdb
-import logging
-import warnings
 from pathlib import Path
 
 # Poistettu top-level streamlit import terminaalivaroitusten välttämiseksi
@@ -17,9 +15,9 @@ def fetch_data(query):
     """
     if not DB_PATH.exists():
         return pd.DataFrame()
-        
+
     import time
-    
+
     max_retries = 5
     for i in range(max_retries):
         try:
@@ -44,7 +42,7 @@ def get_table_counts():
     counts = {}
     if not DB_PATH.exists():
         return counts
-        
+
     query = """
         SELECT 'Zone' as table_name, COUNT(*) as count FROM Zone
         UNION ALL
@@ -74,7 +72,7 @@ def get_health_metrics():
 def get_dt_metrics():
     """Laskee näytevälin (dt) keskiarvon ja hajonnan."""
     return fetch_data("""
-        SELECT AVG(dt) as avg_dt, STDDEV(dt) as std_dt 
+        SELECT AVG(dt) as avg_dt, STDDEV(dt) as std_dt
         FROM (
             SELECT DATEDIFF('second', LAG(timestamp) OVER (PARTITION BY visit_id ORDER BY timestamp), timestamp) as dt
             FROM Zone
@@ -90,9 +88,9 @@ def get_quality_reasons():
 def get_traffic_visits():
     """Hakee vierailutiedot ja erottelee tunnit ja viikonpäivät analyysia varten."""
     return fetch_data("""
-        SELECT *, 
-               EXTRACT(hour FROM start_time) as tunti, 
-               EXTRACT(dow FROM start_time) as viikonpaiva 
+        SELECT *,
+               EXTRACT(hour FROM start_time) as tunti,
+               EXTRACT(dow FROM start_time) as viikonpaiva
         FROM Visit
     """)
 
@@ -118,8 +116,8 @@ def get_all_zone_stats():
     Laskee nyt uniikit asiakkaat (sessiot) ja keskimääräisen viipymän.
     """
     return fetch_data("""
-        SELECT 
-            c.name as zone, 
+        SELECT
+            c.name as zone,
             COUNT(DISTINCT zv.visit_id) as uniikit_asiakkaat,
             COUNT(zv.zone_visit_id) as osumat,
             AVG(DATEDIFF('second', zv.start_time, zv.end_time)) as avg_seconds
@@ -178,7 +176,7 @@ def get_visit_details():
 def get_category_stats():
     """Laskee osastokohtaiset vierailutilastot."""
     return fetch_data("""
-        SELECT c.name, COUNT(zv.visit_id) as visit_count, 
+        SELECT c.name, COUNT(zv.visit_id) as visit_count,
                AVG(DATEDIFF('second', zv.start_time, zv.end_time)) as avg_stay_sec
         FROM Categories c
         LEFT JOIN ZoneVisit zv ON c.category_id = zv.category_id
@@ -304,8 +302,8 @@ def get_hourly_cart_utilization():
                 SELECT MIN(start_time) as min_t, MAX(end_time) as max_t FROM Visit
             ) v,
             generate_series(
-                date_trunc('day', v.min_t), 
-                date_trunc('day', v.max_t) + interval 1 day, 
+                date_trunc('day', v.min_t),
+                date_trunc('day', v.max_t) + interval 1 day,
                 interval 1 hour
             ) AS t(bucket_start)
         ),
@@ -361,23 +359,23 @@ def get_cart_distances():
     """Hakee kärrykohtaiset kuljetut matkat (SQL-laskenta pisteiden perusteella)."""
     return fetch_data("""
         WITH point_lags AS (
-            SELECT 
-                visit_id, 
-                x, y, 
+            SELECT
+                visit_id,
+                x, y,
                 LAG(x) OVER (PARTITION BY visit_id ORDER BY timestamp) as px,
                 LAG(y) OVER (PARTITION BY visit_id ORDER BY timestamp) as py
             FROM Zone
         ),
         visit_distances AS (
-            SELECT 
-                visit_id, 
+            SELECT
+                visit_id,
                 SUM(SQRT(POWER(x - px, 2) + POWER(y - py, 2))) / 100.0 as dist_m
             FROM point_lags
             WHERE px IS NOT NULL
             GROUP BY visit_id
         )
-        SELECT 
-            v.node_id, 
+        SELECT
+            v.node_id,
             COUNT(v.visit_id) as total_trips,
             SUM(vd.dist_m) / 1000.0 as total_distance_km
         FROM Visit v
@@ -395,21 +393,21 @@ def get_department_flow(departments):
     for name, info in departments.items():
         x1, x2, y1, y2 = info['coords']
         case_parts.append(f"WHEN x >= {x1} AND x <= {x2} AND y >= {y1} AND y <= {y2} THEN '{name}'")
-    
+
     case_sql = "CASE " + " ".join(case_parts) + " END"
-    
+
     return fetch_data(f"""
         WITH point_zones AS (
-            SELECT 
-                visit_id, 
+            SELECT
+                visit_id,
                 timestamp,
                 {case_sql} as department
             FROM Zone
             WHERE department IS NOT NULL
         ),
         visit_durations AS (
-            SELECT 
-                visit_id, 
+            SELECT
+                visit_id,
                 department,
                 MIN(timestamp) as entry,
                 MAX(timestamp) as exit,
@@ -418,7 +416,7 @@ def get_department_flow(departments):
             GROUP BY visit_id, department
             HAVING duration_sec > 5  -- Suodatetaan pois pelkät ohikulkijat
         )
-        SELECT 
+        SELECT
             department as zone,
             COUNT(DISTINCT visit_id) as unique_visits,
             AVG(duration_sec) / 60.0 as avg_dwell_min

@@ -38,8 +38,7 @@ class TestAppUI(unittest.TestCase):
         """Test that app.py imports required modules for functionality."""
         # Essential imports for a Streamlit data app
         required_imports = [
-            'streamlit as st',
-            'import duckdb'
+            'streamlit as st'
         ]
         
         missing_imports = []

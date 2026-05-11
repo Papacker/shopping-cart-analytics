@@ -1,5 +1,5 @@
 """
-Streamlit App: Kaupan UWB-paikannusdata 
+Streamlit App: Kaupan UWB-paikannusdata
 """
 
 import os
@@ -26,7 +26,7 @@ else:
     st = None
 
 from pathlib import Path
-import duckdb
+# pylint: disable=wrong-import-position, import-outside-toplevel, invalid-name, redefined-outer-name, too-many-locals, too-many-branches, too-many-statements, broad-exception-caught
 
 # 1. PROJEKTIN JUURI + MODUULIEN LUOTTAMUS
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -35,9 +35,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Repo-moduulit
 from config.store_config import store_config
-from main import run_etl
 from scripts.reset_env import reset_env
-from src.queries import get_table_counts, DB_PATH
+from src.queries import get_table_counts
 
 # Välilehdet
 from src.tabs.tab1_health import render_tab_health
@@ -132,10 +131,10 @@ def main():
     st.header("Liiketoiminta-analytiikka")
 
     tab_health, tab_traffic, tab_checkout, tab_dynamics, tab_heatmap, tab_advanced = st.tabs([
-        "🏥 Datan laatu", 
-        "🚶 Liikennevirrat", 
-        "🏪 Osastoanalyysi", 
-        "🛒 Kärrydynamiikka", 
+        "🏥 Datan laatu",
+        "🚶 Liikennevirrat",
+        "🏪 Osastoanalyysi",
+        "🛒 Kärrydynamiikka",
         "🔥 Heatmap",
         "🧠 Advanced insights"
     ])
@@ -166,5 +165,5 @@ if st is not None:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception:
         pass
-    
+
     main()
