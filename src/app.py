@@ -47,8 +47,6 @@ from src.tabs.tab5_heatmap import render_tab_heatmap
 from src.tabs.tab6_advanced import render_tab_advanced
 
 # 3. KONFIGURAATIO & PROFIILIT
-PROFIILIT = store_config['geometry']['map_profiles']
-oletus_profiili = store_config['geometry']['active_profile']
 
 def main():
     # 3. UI:N RAKENTAMINEN
@@ -86,18 +84,8 @@ def main():
                 st.sidebar.error(f"❌ Kriittinen virhe: {e}")
 
     st.sidebar.divider()
-
-    st.sidebar.subheader("🗺️ Kartan asetukset")
-    valittu_avain = st.sidebar.selectbox(
-        "Valitse karttapohja",
-        options=list(PROFIILIT.keys()),
-        index=list(PROFIILIT.keys()).index(oletus_profiili)
-    )
-    profiili = PROFIILIT[valittu_avain]
-    IMAGE_PATH = PROJECT_ROOT / profiili['filename']
-
-    st.sidebar.divider()
-    st.sidebar.subheader("Vaaralliset toiminnot")
+    st.sidebar.subheader("Järjestelmänhallinta")
+    st.sidebar.caption("Täällä voit tyhjentää paikallisen tietokannan ja aloittaa datan käsittelyn puhtaalta pöydältä.")
     varmistus = st.sidebar.checkbox("Salli tietokannan poisto")
     if st.sidebar.button("🗑️ Tyhjennä tietokanta", disabled=not varmistus):
         with st.spinner("Nollataan ympäristö..."):
@@ -152,7 +140,7 @@ def main():
         render_tab_dynamics()
 
     with tab_heatmap:
-        render_tab_heatmap(IMAGE_PATH, profiili, valittu_avain)
+        render_tab_heatmap()
 
     with tab_advanced:
         render_tab_advanced()
