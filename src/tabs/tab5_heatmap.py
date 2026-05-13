@@ -1,11 +1,16 @@
+from pathlib import Path
 import streamlit as st
 import matplotlib.image as mpimg
+from config.store_config import store_config
 from src.queries import get_heatmap_sample
 from src.charts import create_heatmap_chart
 
-def cm_to_px(x_cm, y_cm, prof, real_w, real_h, manual_invert_y=False, m_ox=None, m_oy=None, m_scale=None):
+def cm_to_px(x_cm, y_cm, prof, real_w, real_h):
     """
     Muuntaa UWB-koordinaatit (cm) kuvan pikseleiksi.
+    - ox, oy: Origon (0,0 cm) sijainti pikseleinä kuvan vasemmasta yläkulmasta.
+    - invert_y: Jos True, UWB Y kasvaa ylöspäin (pikseli-Y pienenee). 
+               Jos False, UWB Y kasvaa alaspäin (pikseli-Y kasvaa).
     """
     ref_w = prof.get('width_px', 1)
     ref_h = prof.get('height_px', 1)
@@ -13,63 +18,101 @@ def cm_to_px(x_cm, y_cm, prof, real_w, real_h, manual_invert_y=False, m_ox=None,
     ratio_x = real_w / ref_w
     ratio_y = real_h / ref_h
     
-    # Käytetään joko manuaalista tai konfiguraation arvoa
-    ox = (m_ox if m_ox is not None else prof['origin_x_px']) * ratio_x
-    oy = (m_oy if m_oy is not None else prof['origin_y_px']) * ratio_y
-    scale_val = m_scale if m_scale is not None else prof['scale_cm_per_px']
+    ox = prof['origin_x_px'] * ratio_x
+    oy = prof['origin_y_px'] * ratio_y
+    scale_val = prof['scale_cm_per_px']
     
     scale_x = scale_val / ratio_x
     scale_y = scale_val / ratio_y
     
     px_x = ox + x_cm / scale_x
     
-    # Huomioidaan sekä profiilin että manuaalinen kääntö
-    should_invert = prof.get('invert_y', False)
-    if manual_invert_y:
-        should_invert = not should_invert
-
-    if should_invert:
-        px_y = real_h - (oy + y_cm / scale_y)
+    if prof.get('invert_y', False):
+        px_y = oy - y_cm / scale_y
     else:
         px_y = oy + y_cm / scale_y
         
     return px_x, px_y
 
-def render_tab_heatmap(IMAGE_PATH, profiili, valittu_avain):
+def render_tab_heatmap():
     st.subheader("🔥 5. Lämpökartat (Spatiaalinen käyttäytyminen)")
 
-    if not IMAGE_PATH.exists():
-        st.error(f"⚠️ Kuvaa ei löydy: {IMAGE_PATH}")
-    else:
-        col_left, col_right = st.columns([3, 1])
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    PROFIILIT = store_config['geometry']['map_profiles']
+    oletus_profiili = store_config['geometry']['active_profile']
+    
+    valikoima = list(PROFIILIT.keys())
+    oletus_indeksi = valikoima.index(oletus_profiili) if oletus_profiili in valikoima else 0
 
-        with col_right:
-            st.markdown("### 🛠️ Kalibrointi")
-            manual_invert_y = st.checkbox("Peilaa pystysuunnassa", value=False)
+    col_left, col_right = st.columns([3, 1])
+
+    with col_right:
+        st.markdown("### 🗺️ Karttapohja")
+        valittu_avain = st.selectbox(
+            "Valitse karttapohja",
+            options=valikoima,
+            index=oletus_indeksi
+        )
+        prof_base = PROFIILIT[valittu_avain]
+        
+        show_calib = st.checkbox("🛠️ Kalibrointitila", value=False)
+        if show_calib:
+            st.info("Säädä heatmap kohdalleen ja kopioi arvot talteen.")
+            ox_val = st.slider("Origo X (px)", -500.0, 1500.0, float(prof_base['origin_x_px']), step=5.0)
+            oy_val = st.slider("Origo Y (px)", -500.0, 1000.0, float(prof_base['origin_y_px']), step=5.0)
+            scale_val = st.slider("Skaala (cm/px)", 1.0, 20.0, float(prof_base['scale_cm_per_px']), step=0.1)
+            inv_y = st.checkbox("Käännä Y-akseli (invert_y)", value=prof_base.get('invert_y', False))
             
-            with st.expander("🎯 Hienosäätö (Vain kalibrointi)"):
-                m_ox = st.slider("Origo X", -500, 1000, int(profiili['origin_x_px']))
-                m_oy = st.slider("Origo Y", -500, 1000, int(profiili['origin_y_px']))
-                m_scale = st.slider("Skaala (cm/px)", 1.0, 30.0, float(profiili['scale_cm_per_px']), step=0.1)
-                st.info("💡 Säädä näitä, kunnes heatmap istuu hyllyihin. Kerro sitten luvut minulle!")
+            profiili = {
+                'origin_x_px': ox_val,
+                'origin_y_px': oy_val,
+                'scale_cm_per_px': scale_val,
+                'invert_y': inv_y,
+                'width_px': prof_base.get('width_px', 1222),
+                'height_px': prof_base.get('height_px', 567)
+            }
+        else:
+            profiili = prof_base
 
-            sample_pct = st.slider(
-                "Näytteistysprosentti (%)", 1, 100, 10,
-                help="Kuinka suuri osa pisteistä piirretään (koko kanta = 100%)"
-            )
+        IMAGE_PATH = PROJECT_ROOT / profiili['filename']
+
+        st.markdown("### ✨ Näkymän säädöt")
+        
+        bins_val = st.slider(
+            "📍 Yksityiskohtien tarkkuus", 
+            50, 400, 200, step=25,
+            help="Suurempi arvo näyttää tarkemmin yksittäiset polut, pienempi arvo näyttää yleiset trendit."
+        )
+        
+        vmax_val = st.slider(
+            "🔥 Värien voimakkuus", 
+            0, 1000, 0, 
+            help="Säädä tätä, jos kartta näyttää liian haalealta tai liian punaiselta."
+        )
+
+        with st.expander("⚙️ Lisäasetukset"):
+            sample_pct = st.slider("Datan kattavuus (%)", 1, 100, 10)
+            alpha_val = st.slider("Läpinäkyvyys", 0.1, 1.0, 0.75)
             colormap = st.selectbox(
-                "Värikartta",
+                "Väriteema",
                 ["YlOrRd", "hot", "plasma", "inferno", "RdYlGn_r"],
                 index=0
             )
-            alpha_val = st.slider("Läpinäkyvyys", 0.3, 1.0, 0.75, step=0.05)
-            bins_val  = st.slider("Tarkkuus (bins)", 50, 400, 200, step=25)
-            
-            st.markdown("### 🕒 Suodattimet")
-            paivat = {"Kaikki": -1, "Maanantai": 1, "Tiistai": 2, "Keskiviikko": 3, "Torstai": 4, "Perjantai": 5, "Lauantai": 6, "Sunnuntai": 0}
-            valittu_paiva = st.selectbox("Viikonpäivä", list(paivat.keys()))
-            tunnit_valinta = st.slider("Kellonaika", 0, 23, (8, 21))
 
+        st.markdown("---")
+        st.markdown("### 🕒 Aika-rajaus")
+        paivat = {
+            "📅 Kaikki päivät": -1, 
+            "Maanantai": 1, "Tiistai": 2, "Keskiviikko": 3, 
+            "Torstai": 4, "Perjantai": 5, "Lauantai": 6, "Sunnuntai": 0
+        }
+        valittu_paiva = st.selectbox("Valitse viikonpäivä", list(paivat.keys()))
+        tunnit_valinta = st.slider("Kellonaika (tunnit)", 0, 23, (8, 21))
+
+    if not IMAGE_PATH.exists():
+        with col_left:
+            st.error(f"⚠️ Taustakarttaa ei löydy: {IMAGE_PATH}")
+    else:
         # 1. Haetaan data ensin, jotta se on käytettävissä kaikkialla
         with st.spinner("Ladataan pisteitä..."):
             where_clauses = []
@@ -77,17 +120,6 @@ def render_tab_heatmap(IMAGE_PATH, profiili, valittu_avain):
                 where_clauses.append(f"EXTRACT(dow FROM timestamp) = {paivat[valittu_paiva]}")
             where_clauses.append(f"EXTRACT(hour FROM timestamp) BETWEEN {tunnit_valinta[0]} AND {tunnit_valinta[1]}")
             df_zone = get_heatmap_sample(sample_pct, where_clauses)
-
-        # 2. Piirretään diagnostiikka (nyt df_zone on olemassa)
-        with col_right:
-            with st.expander("🔍 Tekninen diagnostiikka"):
-                st.write(f"Profiili: `{valittu_avain}`")
-                st.write(f"Scale: `{profiili['scale_cm_per_px']}`")
-                st.write(f"Origin: `({profiili['origin_x_px']}, {profiili['origin_y_px']})`")
-                st.write(f"Invert Y: `{profiili['invert_y']}`")
-                if not df_zone.empty:
-                    st.write(f"Data X: `{df_zone['x'].min():.0f} - {df_zone['x'].max():.0f}`")
-                    st.write(f"Data Y: `{df_zone['y'].min():.0f} - {df_zone['y'].max():.0f}`")
 
         with col_left:
             if df_zone.empty:
@@ -98,18 +130,20 @@ def render_tab_heatmap(IMAGE_PATH, profiili, valittu_avain):
 
                 px_x, px_y = cm_to_px(
                     df_zone['x'].values, df_zone['y'].values,
-                    profiili, real_w, real_h,
-                    manual_invert_y, m_ox, m_oy, m_scale
+                    profiili, real_w, real_h
                 )
 
                 mask = (px_x >= -300) & (px_x < real_w + 300) & (px_y >= -300) & (px_y < real_h + 300)
                 px_x = px_x[mask]
                 px_y = px_y[mask]
 
-                fig = create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w, real_h, sample_pct)
+                fig = create_heatmap_chart(
+                    img, px_x, px_y, bins_val, colormap, alpha_val, 
+                    real_w, real_h, sample_pct, v_max=vmax_val
+                )
                 st.pyplot(fig, width='stretch')
 
                 st.caption(
-                    f"Aktiiviset arvot -> Origo X: {m_ox}, Origo Y: {m_oy}, Skaala: {m_scale} | "
+                    f"Aktiiviset arvot -> Origo X: {profiili['origin_x_px']}, Origo Y: {profiili['origin_y_px']}, Skaala: {profiili['scale_cm_per_px']} | "
                     f"Kuva: {real_w}×{real_h} px"
                 )

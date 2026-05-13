@@ -267,7 +267,7 @@ def create_maintenance_status_chart(df_sorted, limit_km):
     return fig
 
 
-def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w, real_h, sample_pct):
+def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w, real_h, sample_pct, v_max=None):
     """
     Luo korkealaatuisen lämpökartan. 
     Käyttää YlOrRd-värikarttaa ja parempaa tiheyden hallintaa.
@@ -285,11 +285,11 @@ def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w,
     ax.imshow(img, extent=[0, real_w, real_h, 0], aspect='equal', zorder=0)
 
     # Heatmap overlay
-    # Säädetään vmax niin että kartta ei ole "tukossa" mustasta/punaisesta
     h = ax.hist2d(
         px_x, px_y, bins=bins_val, 
         range=[[0, real_w], [0, real_h]],
-        cmap=colormap, alpha=alpha_val, cmin=5, zorder=1
+        cmap=colormap, alpha=alpha_val, cmin=1, zorder=1,
+        vmax=v_max if v_max and v_max > 0 else None
     )
 
     # Väripalkki
