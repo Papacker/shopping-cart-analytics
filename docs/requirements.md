@@ -38,7 +38,7 @@ Data-arkkitehtuuri:
     * Miksi siivottiin? 
     Tiedostoissa oli yhteensä noin 140 miljoonaa riviä, joten raakadatan käsittely olisi ollut erittäin hidasta. Yksi rivi sisälsi ostoskärryn paikannuskoordinaatit ja aikaleiman sekä Q- ja Z-arvon. Z-arvo kertoi paikannussignaalin korkeuden (kerros) ja Q-arvo laadun. Jotta datasta saatiin järkevä analysoitava kokonaisuus, joka vastaisi luotettavasti asiakaskäyttäytymistä, raakadatasta täytyi siivota pois epäoleelliset tiedot sekä mahdolliset virheet, jotta lopputulos olisi luotettava.  
     * Mitä siivottiin? 
-    1. Q-arvo ja Z-arvosarakkeet. Q-arvolla ei ollut merkitystä, koska myymälä oli yhdessä kerroksessa. Z-arvon mittaristo ei puolestaan ollut tiedossa. 
+    1. Q-arvo ja Z-arvosarakkeet. Z-arvolla ei ollut merkitystä, koska myymälä oli yhdessä kerroksessa. Q-arvon mittaristo ei puolestaan ollut tiedossa. 
     2. Negatiiviset koordinaatit (x-koordinaatiston 0-linja = kassojen keskilinja, y-koordinaatiston 0 = vasen yläkulma)
     3. Liikkeet dead zone -alueilla, koska myymälän ulkopuolisella datalla ei ollut liiketoiminnallista arvoa. 
     4. Hajanaiset signaalit, jotka eivät muodostaneet ostossessiota eli alkaneet sisäänkäynniltä ja päättyneet kassalle.
