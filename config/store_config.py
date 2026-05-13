@@ -3,35 +3,26 @@ store_config = {
     "geometry": {
         "store_max_x_cm": 11206,      # Myymälän kokonaispituus X-suunnassa (senttimetreinä)
         "store_max_y_cm": 5220,       # Myymälän kokonaisleveys Y-suunnassa (senttimetreinä)
-        "active_profile": "default",
+        "active_profile": "Koko myymälä",
         "map_profiles": {
-            "default": {
+            "Koko myymälä": {
                 "filename": "kauppa.jpg",
                 "width_px": 1222,
                 "height_px": 567,
-                "scale_cm_per_px": 9.17,
-                "origin_x_px": -30.0,   # Siirretty vasemmalle (oli 50) jotta täsmää hyllyihin
-                "origin_y_px": 20.0,
-                "invert_y": True
+                "scale_cm_per_px": 9.0,
+                "origin_x_px": 80.0,
+                "origin_y_px": -5.0,
+                "invert_y": False
             },
-            "osasto": {
+            "Osastonäkymä": {
                 "filename": "kauppa_osasto.jpg",
                 "width_px": 1222,
                 "height_px": 567,
-                "scale_cm_per_px": 9.17,
-                "origin_x_px": 50.0,    # Tämä on käyttäjän mukaan "täydellinen"
-                "origin_y_px": 20.0,
-                "invert_y": True
-            },
-            "kauppa2": {
-                "filename": "kauppa2.jpg",
-                "width_px": 1428,
-                "height_px": 722,
-                "scale_cm_per_px": 6.2,  # Pienennetty jotta heatmap on vielä "isompi"
-                "origin_x_px": 60.0,     # Säädetty kauppa2:n valkoisten marginaalien mukaan
-                "origin_y_px": 40.0,     # Säädetty pystysuunnan mukaan
-                "invert_y": True
-            },
+                "scale_cm_per_px": 9.0,
+                "origin_x_px": 80.0,
+                "origin_y_px": -5.0,
+                "invert_y": False
+            }
         },
         "timezone": "Europe/Helsinki"
     },
@@ -112,5 +103,3 @@ store_config = {
         "sun": (10, 20)
     }
 }
-
-# Konfiguraatio ladattu
