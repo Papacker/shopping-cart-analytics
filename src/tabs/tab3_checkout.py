@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 from config.store_config import store_config
 from src.queries import get_all_zone_stats
 from src.charts import create_departments_bar_chart, create_checkout_bar_chart
@@ -33,10 +34,16 @@ def render_tab_checkout():
     df_kassa_all = df_kassa_all.rename(columns={'uniikit_asiakkaat': 'käynnit'})
 
     # Näytetään myymälän pohjakartta expanderissa (kuin popup)
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    IMAGE_PATH = PROJECT_ROOT / "images" / "kauppa_osasto.jpg"
+
     with st.expander("🗺️ Näytä myymälän osastokartta"):
         col_map_img, col_map_text = st.columns([2, 1])
         with col_map_img:
-            st.image("kauppa_osasto.jpg", width='stretch')
+            if IMAGE_PATH.exists():
+                st.image(str(IMAGE_PATH), width='stretch')
+            else:
+                st.error(f"Kuvaa ei löydy polusta: {IMAGE_PATH}")
         with col_map_text:
             st.markdown("**Osastojen sijainti**")
             st.info("Voit käyttää tätä karttaa viitekehyksenä alla oleville tilastoille.")

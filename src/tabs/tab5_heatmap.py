@@ -74,7 +74,17 @@ def render_tab_heatmap():
         else:
             profiili = prof_base
 
-        IMAGE_PATH = PROJECT_ROOT / profiili['filename']
+        filename_raw = profiili['filename'].replace("images/", "")
+        polku_vaihtoehdot = [
+            PROJECT_ROOT / "images" / filename_raw,
+            PROJECT_ROOT / filename_raw
+        ]
+        
+        IMAGE_PATH = polku_vaihtoehdot[0] 
+        for p in polku_vaihtoehdot:
+            if p.exists():
+                IMAGE_PATH = p
+                break
 
         st.markdown("### ✨ Näkymän säädöt")
         

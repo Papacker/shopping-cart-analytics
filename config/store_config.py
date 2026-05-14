@@ -6,7 +6,7 @@ store_config = {
         "active_profile": "Koko myymälä",
         "map_profiles": {
             "Koko myymälä": {
-                "filename": "kauppa.jpg",
+                "filename": "images/kauppa.jpg",
                 "width_px": 1222,
                 "height_px": 567,
                 "scale_cm_per_px": 9.0,
@@ -15,7 +15,7 @@ store_config = {
                 "invert_y": False
             },
             "Osastonäkymä": {
-                "filename": "kauppa_osasto.jpg",
+                "filename": "images/kauppa_osasto.jpg",
                 "width_px": 1222,
                 "height_px": 567,
                 "scale_cm_per_px": 9.0,
