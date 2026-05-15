@@ -6,13 +6,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-
-
 # Skripti on /agentti/crew.py -> .env on /
 current_file = Path(__file__).resolve()
 project_root = current_file.parent.parent
 env_path = project_root / ".env"
 load_dotenv(dotenv_path=env_path)
+os.environ["OPENAI_API_KEY"] = "NA"
+os.environ["OPENAI_API_BASE"] = f"{os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')}/v1"
+os.environ["OTEL_SDK_DISABLED"] = "true"
+os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
 
 # Lisätään polku, jotta tools-kansio löytyy varmasti
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,8 +39,9 @@ MODEL_NAME = os.environ.get("APP_OLLAMA_MODEL", "llama3.1:8b")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 
 llm = LLM(
-    model=f"ollama/{MODEL_NAME}",
-    base_url=OLLAMA_HOST,
+    model=MODEL_NAME, # Poistettu ollama/-prefiksi
+    base_url=f"{OLLAMA_HOST}/v1", # Käytetään OpenAI-yhteensopivaa endpointia
+    api_key="NA",
     temperature=0.1,
     max_tokens=4096,
 )
@@ -330,7 +333,78 @@ def build_crew(task_description: str) -> Crew:
         process=Process.sequential,
         verbose=True,
     )
+def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
+    """
+    UI:n chatin käyttämä tiimi. Käyttää samoja kolmea agenttia kuin build_crew(),
+    mutta UI:sta valitulla mallilla ja älykkäällä agentinvalinnalla.
+    """
+    # Luodaan uusi LLM-instanssi UI:sta valitulla mallilla
+    chat_llm = LLM(
+        model=model_name,
+        base_url=f"{OLLAMA_HOST}/v1",
+        api_key="NA",
+        temperature=0.1
+    )
 
+    db_path = str(project_root / "database" / "store.db")
+    fetched_data = _fetch_all_data(db_path)
+
+    # Älykäs kontekstisuodatus: agentti saa vain pyynnön kannalta oleellisen datan
+    context_parts = []
+    task_low = task_description.lower()
+
+    if any(kw in task_low for kw in ["osasto", "suosituin", "department", "hylly"]):
+        if "osastoanalyysi" in fetched_data:
+            context_parts.append(f"=== SUOSITUIMMAT OSASTOT ===\n{fetched_data['osastoanalyysi']}")
+
+    if any(kw in task_low for kw in ["kassa", "ruuhka", "checkout", "jonotus"]):
+        if "kassaruuhka" in fetched_data:
+            context_parts.append(f"=== KASSARUUHKA ===\n{fetched_data['kassaruuhka']}")
+
+    if any(kw in task_low for kw in ["reitti", "kartta", "heatmap", "koordinaatti", "visuali"]):
+        if "zone_kattavuus" in fetched_data:
+            context_parts.append(f"=== ZONE-KATTAVUUS ===\n{fetched_data['zone_kattavuus']}")
+
+    if not context_parts and "virhe" not in fetched_data:
+        context_parts = [f"=== {nimi.upper()} ===\n{tulos}" for nimi, tulos in fetched_data.items()]
+
+    data_context = "\n\n".join(context_parts) if context_parts else "Tietokanta on tyhjä tai siihen ei saatu yhteyttä."
+
+    task_prompt = (
+        f"KÄYTTÄJÄN PYYNTÖ: {task_description}\n\n"
+        f"VALMIKSI HAETTU DATA (käytä VAIN tätä):\n{data_context}\n\n"
+        "Vastaa TIUKASTI käyttäjän pyyntöön. Muotoile vastaus Markdownilla. Älä keksi dataa."
+    )
+
+    # Agentinvalinta: hyödynnetään projektin kolmea varsinaista agenttia
+    if any(kw in task_low for kw in ["visuali", "kartta", "heatmap", "reitti", "koodi", "python"]):
+        active_agent = Agent(
+            role=engineer.role, goal=engineer.goal, backstory=engineer.backstory,
+            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
+        )
+    elif any(kw in task_low for kw in ["kassa", "ruuhka", "liiketoiminta", "kehitysehdotus"]):
+        active_agent = Agent(
+            role=manager.role, goal=manager.goal, backstory=manager.backstory,
+            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
+        )
+    else:  # oletus: data-analyytikko (osasto, yleiskatsaus, sql, data...)
+        active_agent = Agent(
+            role=analyst.role, goal=analyst.goal, backstory=analyst.backstory,
+            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
+        )
+
+    chat_task = Task(
+        description=task_prompt,
+        expected_output="Asiantunteva, tiivis suomenkielinen analyysi Markdownilla.",
+        agent=active_agent
+    )
+
+    return Crew(
+        agents=[active_agent],
+        tasks=[chat_task],
+        process=Process.sequential,
+        verbose=True
+    )
 
 
 

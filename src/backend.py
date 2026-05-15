@@ -12,6 +12,7 @@ import traceback
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 from agentti.crew import build_dynamic_chat_crew
@@ -20,7 +21,26 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-app = FastAPI(title="Tekoälyagentin FastAPI Backend")
+PROXY_PATH = "/@Papacker/team-2-laitetaan-parastamme.coder/apps/code-server/proxy/8000"    
+
+app = FastAPI(
+    title="Tekoälyagentin FastAPI Backend",
+    root_path=PROXY_PATH,
+    docs_url="/docs",
+    openapi_url="/openapi.json"
+)
+
+# Lisää CORS-asetukset, jotta Streamlit voi keskustella API:n kanssa
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+async def root():
+    return {"message": "Backend is online", "proxy_root": PROXY_PATH}
 
 WORKSPACE_DIR = PROJECT_ROOT / "agentti" / "workspace"
 STATUS_FILE = WORKSPACE_DIR / "report_status.json"
