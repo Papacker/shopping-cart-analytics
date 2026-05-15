@@ -45,6 +45,8 @@ from src.tabs.tab3_checkout import render_tab_checkout
 from src.tabs.tab4_dynamics import render_tab_dynamics
 from src.tabs.tab5_heatmap import render_tab_heatmap
 from src.tabs.tab6_advanced import render_tab_advanced
+from src.tabs.tab7_insights import render_tab_insights
+
 
 # 3. KONFIGURAATIO & PROFIILIT
 
@@ -84,6 +86,28 @@ def main():
                 st.sidebar.error(f"❌ Kriittinen virhe: {e}")
 
     st.sidebar.divider()
+    st.sidebar.divider()
+    st.sidebar.markdown("### 🤖 TIIMIN AIVOT (Ollama)")
+    st.sidebar.caption("Valitse kielimalli, jota koko CrewAI-tiimi käyttää. Suosittelemme gemma3:4b tai qwen3.5:9b.")
+    
+    import requests
+    available_models = ["llama3.1:8b", "qwen2.5-coder:7b"]
+    try:
+        res = requests.get("http://127.0.0.1:11434/api/tags", timeout=2)
+        if res.status_code == 200:
+            fetched = [m["name"] for m in res.json().get("models", []) if "cloud" not in m["name"]]
+            if fetched:
+                available_models = fetched
+    except Exception:
+        pass
+
+    st.session_state.selected_model = st.sidebar.selectbox(
+        "Kielimalli", 
+        available_models, 
+        index=available_models.index("gemma3:4b") if "gemma3:4b" in available_models else 0
+    )
+    
+    st.sidebar.divider()
     st.sidebar.subheader("Järjestelmänhallinta")
     st.sidebar.caption("Täällä voit tyhjentää paikallisen tietokannan ja aloittaa datan käsittelyn puhtaalta pöydältä.")
     varmistus = st.sidebar.checkbox("Salli tietokannan poisto")
@@ -118,13 +142,14 @@ def main():
     # --- ANALYTIIKKA-OSIO ---
     st.header("Liiketoiminta-analytiikka")
 
-    tab_health, tab_traffic, tab_checkout, tab_dynamics, tab_heatmap, tab_advanced = st.tabs([
+    tab_health, tab_traffic, tab_checkout, tab_dynamics, tab_heatmap, tab_advanced, tab_insights = st.tabs([
         "🏥 Datan laatu",
         "🚶 Liikennevirrat",
         "🏪 Osastoanalyysi",
         "🛒 Kärrydynamiikka",
         "🔥 Heatmap",
-        "🧠 Advanced insights"
+        "🧠 Advanced insights",
+        "✨ Asiakkaalle"
     ])
 
     with tab_health:
@@ -144,6 +169,11 @@ def main():
 
     with tab_advanced:
         render_tab_advanced()
+        
+    with tab_insights:
+        render_tab_insights()
+
+
 
 # --- ENTRY POINT ---
 if st is not None:
