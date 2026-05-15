@@ -88,7 +88,7 @@ def main():
     st.sidebar.divider()
     st.sidebar.divider()
     st.sidebar.markdown("### 🤖 TIIMIN AIVOT (Ollama)")
-    st.sidebar.caption("Valitse kielimalli, jota koko CrewAI-tiimi käyttää. Suosittelemme gemma3:4b tai qwen3.5:9b.")
+    st.sidebar.caption("Valitse kielimalli, jota koko CrewAI-tiimi käyttää. Suosittelemme llama3.1:8b tai qwen2.5:7b.")
     
     import requests
     available_models = ["llama3.1:8b", "qwen2.5-coder:7b"]
