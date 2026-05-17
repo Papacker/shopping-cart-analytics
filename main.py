@@ -140,7 +140,7 @@ def run_etl():
             # Jos taulua ei ole vielä olemassa, sekin tarkoittaa että pitää ajaa
             raw_files = all_files
 
-    num_workers = min(len(raw_files), os.cpu_count(), 8)
+    num_workers = min(len(raw_files), os.cpu_count(), 6)
     if num_workers < 1:
         num_workers = 1
 

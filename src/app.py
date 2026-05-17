@@ -87,25 +87,58 @@ def main():
 
     st.sidebar.divider()
     st.sidebar.divider()
-    st.sidebar.markdown("### 🤖 TIIMIN AIVOT (Ollama)")
-    st.sidebar.caption("Valitse kielimalli, jota koko CrewAI-tiimi käyttää. Suosittelemme llama3.1:8b tai qwen2.5:7b.")
+    
+    # === KIELIMALLIN VALINTA ===
+    st.sidebar.markdown("### 🧠 Agentin Kielimalli")
+    st.sidebar.caption("Valitse Ollama-kielimalli, jota Agenttiarkkitehtuuri käyttää analysointiin ja keskusteluun.")
     
     import requests
-    available_models = ["llama3.1:8b", "qwen2.5-coder:7b"]
+    # Käytä ympäristömuuttujaa tai oletuksena paikallista
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
+    
+    # Haetaan kaikki mallit Ollama-palvelimelta
+    available_models = ["qwen3.6:35b-a3b", "llama3.1:8b", "qwen2.5-coder:7b"]
     try:
-        res = requests.get("http://127.0.0.1:11434/api/tags", timeout=2)
+        res = requests.get(f"{ollama_host}/api/tags", timeout=5)
         if res.status_code == 200:
-            fetched = [m["name"] for m in res.json().get("models", []) if "cloud" not in m["name"]]
-            if fetched:
-                available_models = fetched
-    except Exception:
-        pass
+            models_data = res.json().get("models", [])
+            if models_data:
+                available_models = [m["name"] for m in models_data]
+    except Exception as e:
+        st.sidebar.warning(f"Ei saada yhteyttä Ollamaan: {e}")
 
+    # Suositukset eri käyttötarkoituksiin
+    recommendations = {
+        "qwen3.6:35b-a3b": "Paras yleisanalyysiin (suuri, pätevä)",
+        "llama3.1:8b": "Tasapainoinen vaihtoehto",
+        "qwen2.5-coder:7b": "Koodianalyysiin",
+        "gemma3:4b": "Nopea analyysiin"
+    }
+    
+    # Oletusvalinta - valitse qwen3.6 jos löytyy, muuten ensimmäinen
+    default_index = 0
+    for i, m in enumerate(available_models):
+        if "qwen3.6" in m:
+            default_index = i
+            break
+    
+    # Valinta
     st.session_state.selected_model = st.sidebar.selectbox(
-        "Kielimalli", 
+        "Valitse kielimalli", 
         available_models, 
-        index=available_models.index("gemma3:4b") if "gemma3:4b" in available_models else 0
+        index=default_index,
+        label_visibility="collapsed"
     )
+    
+    # Näytä käytössä oleva malli
+    current = st.session_state.selected_model
+    st.sidebar.success(f"✅ **Käytössä:** `{current}`")
+    
+    # Näytä suositus jos löytyy
+    for rec_model, rec_text in recommendations.items():
+        if rec_model in current:
+            st.sidebar.caption(f"💡 {rec_text}")
+            break
     
     st.sidebar.divider()
     st.sidebar.subheader("Järjestelmänhallinta")
