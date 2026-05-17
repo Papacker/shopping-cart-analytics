@@ -109,11 +109,18 @@ def main():
 
     # Suositukset eri käyttötarkoituksiin
     recommendations = {
-        "qwen3.6:35b-a3b": "Paras yleisanalyysiin (suuri, pätevä)",
-        "llama3.1:8b": "Tasapainoinen vaihtoehto",
-        "qwen2.5-coder:7b": "Koodianalyysiin",
-        "gemma3:4b": "Nopea analyysiin"
+        "qwen3.6": "💡 **qwen3.6:35b-a3b** = Paras yleisanalyysiin (suuri, pätevä)",
+        "llama3.1": "💡 **llama3.1:8b** = Tasapainoinen vaihtoehto",
+        "qwen2.5": "💡 **qwen2.5-coder:7b** = Koodianalyysiin"
     }
+    
+    # Näytä suositukset ENNEN valintaa
+    st.sidebar.markdown("""
+    **Suositukset:**
+    - qwen3.6 = Yleisanalyysiin
+    - llama3.1 = Tasapainoinen  
+    - qwen2.5-coder = Koodiin
+    """)
     
     # Oletusvalinta - valitse qwen3.6 jos löytyy, muuten ensimmäinen
     default_index = 0
@@ -133,12 +140,6 @@ def main():
     # Näytä käytössä oleva malli
     current = st.session_state.selected_model
     st.sidebar.success(f"✅ **Käytössä:** `{current}`")
-    
-    # Näytä suositus jos löytyy
-    for rec_model, rec_text in recommendations.items():
-        if rec_model in current:
-            st.sidebar.caption(f"💡 {rec_text}")
-            break
     
     st.sidebar.divider()
     st.sidebar.subheader("Järjestelmänhallinta")

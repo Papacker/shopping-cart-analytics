@@ -335,10 +335,10 @@ def build_crew(task_description: str) -> Crew:
     )
 def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
     """
-    UI:n chatin käyttämä tiimi. Käyttää samoja kolmea agenttia kuin build_crew(),
-    mutta UI:sta valitulla mallilla ja älykkäällä agentinvalinnalla.
+    UI:n chatin käyttämä tiimi. Reitittää pyynnön oikealle asiantuntijalle
+    ja käyttää UI:sta valittua kielimallia.
     """
-    # Luodaan uusi LLM-instanssi UI:sta valitulla mallilla
+    # 1. Luodaan aivot valitulla mallilla
     chat_llm = LLM(
         model=model_name,
         base_url=f"{OLLAMA_HOST}/v1",
@@ -349,7 +349,7 @@ def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
     db_path = str(project_root / "database" / "store.db")
     fetched_data = _fetch_all_data(db_path)
 
-    # Älykäs kontekstisuodatus: agentti saa vain pyynnön kannalta oleellisen datan
+    # 2. Suodatetaan oikea konteksti (Estää mallin sekoamisen liian isoon dataan)
     context_parts = []
     task_low = task_description.lower()
 
@@ -365,33 +365,46 @@ def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
         if "zone_kattavuus" in fetched_data:
             context_parts.append(f"=== ZONE-KATTAVUUS ===\n{fetched_data['zone_kattavuus']}")
 
+    # Jos ei spesifiä pyyntöä, annetaan yleisdata
     if not context_parts and "virhe" not in fetched_data:
-        context_parts = [f"=== {nimi.upper()} ===\n{tulos}" for nimi, tulos in fetched_data.items()]
+        context_parts = [f"=== YLEISKATSAUS ===\n{fetched_data.get('yleiskatsaus', '')}"]
 
     data_context = "\n\n".join(context_parts) if context_parts else "Tietokanta on tyhjä tai siihen ei saatu yhteyttä."
 
-    task_prompt = (
-        f"KÄYTTÄJÄN PYYNTÖ: {task_description}\n\n"
-        f"VALMIKSI HAETTU DATA (käytä VAIN tätä):\n{data_context}\n\n"
-        "Vastaa TIUKASTI käyttäjän pyyntöön. Muotoile vastaus Markdownilla. Älä keksi dataa."
-    )
+    # 3. Älykäs Agentin reititys UI-painikkeiden perusteella
+    # Luodaan agentti lennosta kopioiden alkuperäiset tavoitteet, mutta uudella LLM:llä ja oikeilla työkaluilla!
 
-    # Agentinvalinta: hyödynnetään projektin kolmea varsinaista agenttia
-    if any(kw in task_low for kw in ["visuali", "kartta", "heatmap", "reitti", "koodi", "python"]):
-        active_agent = Agent(
-            role=engineer.role, goal=engineer.goal, backstory=engineer.backstory,
-            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
-        )
-    elif any(kw in task_low for kw in ["kassa", "ruuhka", "liiketoiminta", "kehitysehdotus"]):
-        active_agent = Agent(
-            role=manager.role, goal=manager.goal, backstory=manager.backstory,
-            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
-        )
-    else:  # oletus: data-analyytikko (osasto, yleiskatsaus, sql, data...)
+    if "osastoanalyysi" in task_low:
+        # Päätyy tänne, kun UI:ssa painetaan: "LUO OSASTOANALYYSI (DATA-ANALYYTIKKO)"
         active_agent = Agent(
             role=analyst.role, goal=analyst.goal, backstory=analyst.backstory,
-            llm=chat_llm, tools=[], verbose=True, allow_delegation=False
+            llm=chat_llm, tools=data_tools, verbose=True, allow_delegation=False
         )
+    elif "kassaruuhkat" in task_low or "kassaruuhka" in task_low:
+        # Päätyy tänne, kun UI:ssa painetaan: "ANALYSOI KASSARUUHKAT (ALI BABA)"
+        active_agent = Agent(
+            role=liiketoiminta_agentti.role, goal=liiketoiminta_agentti.goal, backstory=liiketoiminta_agentti.backstory,
+            llm=chat_llm, tools=code_tools, verbose=True, allow_delegation=False
+        )
+    elif any(kw in task_low for kw in ["visuali", "python", "reitit"]):
+        # Päätyy tänne, kun UI:ssa painetaan: "KÄRRYREITIT PYTHONILLA (VISUALISOIJA)"
+        active_agent = Agent(
+            role=engineer.role, goal=engineer.goal, backstory=engineer.backstory,
+            llm=chat_llm, tools=code_tools, verbose=True, allow_delegation=False
+        )
+    else:  
+        # Vapaa chat-viesti: Analyysipäällikkö hoitaa yleisluontoiset vastaukset
+        active_agent = Agent(
+            role=manager.role, goal=manager.goal, backstory=manager.backstory,
+            llm=chat_llm, tools=pm_tools, verbose=True, allow_delegation=False
+        )
+
+    # 4. Määritetään itse tehtävä
+    task_prompt = (
+        f"KÄYTTÄJÄN PYYNTÖ: {task_description}\n\n"
+        f"KÄYTETTÄVISSÄ OLEVA TIETOKANTADATA:\n{data_context}\n\n"
+        "Vastaa käyttäjän pyyntöön asiantuntevasti roolisi mukaisesti. Muotoile vastaus selkeällä Markdownilla."
+    )
 
     chat_task = Task(
         description=task_prompt,
@@ -405,8 +418,6 @@ def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
         process=Process.sequential,
         verbose=True
     )
-
-
 
 # === Testausapu ===
 

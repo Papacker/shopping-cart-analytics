@@ -1,10 +1,17 @@
 import streamlit as st
 import requests
+import os
 import time
+
+# Backend osoite
+BACKEND_HOST = os.environ.get("BACKEND_HOST", "http://127.0.0.1:8000")
 
 def render_tab_insights():
     st.markdown("### ✨ Konsultoi AI-tiimiä (CrewAI)")
-    st.markdown("Keskustele suoraan **Analyysipäällikön**, **Data-analyytikon**, **Visualisoijan** ja **Ali Baban** kanssa.")
+    
+    # Näytä valittu malli
+    current_model = st.session_state.get("selected_model", "qwen3.6:35b-a3b")
+    st.markdown(f"🧠 **Käytössä:** `{current_model}` | *Vaihda mallia vasemman reunan Hallinta-paneelista*")
     
     if "agent_chat_history" not in st.session_state:
         st.session_state.agent_chat_history = []
@@ -19,15 +26,15 @@ def render_tab_insights():
         st.session_state.chat_is_generating = True
         try:
             requests.post(
-                "http://127.0.0.1:8000/api/chat",
+                f"{BACKEND_HOST}/api/chat",
                 json={
                     "message": prompt, 
-                    "model": st.session_state.get("selected_model", "gemma3:4b")
+                    "model": current_model
                 },
                 timeout=5
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Chat start error: {e}")
         
     with st.expander("🚀 Valmiit tehtävänannot tiimille", expanded=not st.session_state.chat_is_generating):
         st.caption("Valitse alta valmis komento, jonka Analyysipäällikkö delegoi oikealle agentille:")
@@ -76,7 +83,7 @@ def render_tab_insights():
         if st.session_state.chat_is_generating:
             with st.chat_message("assistant", avatar="🤖"):
                 try:
-                    res = requests.get("http://127.0.0.1:8000/api/report-status", timeout=5)
+                    res = requests.get(f"{BACKEND_HOST}/api/report-status", timeout=5)
                     if res.status_code == 200:
                         status_data = res.json()
                         
@@ -106,7 +113,7 @@ def render_tab_insights():
                                 add_message("assistant", ans)
                             
                             # Nollataan taustan status
-                            requests.post("http://127.0.0.1:8000/api/cancel-report", timeout=2)
+                            requests.post(f"{BACKEND_HOST}/api/cancel-report", timeout=2)
                             st.rerun()
                             
                 except Exception as e:
