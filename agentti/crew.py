@@ -30,6 +30,7 @@ from tools import (
     run_python, run_shell,
     query_duckdb, inspect_schema,
     list_files, read_file, write_file,
+    search_web
 )
 from config.store_config import store_config  # pylint: disable=import-error
 
@@ -104,6 +105,15 @@ liiketoiminta_agentti = Agent(
     backstory="Python-kehittaja. Tallennat tulokset workspace-kansioon.",
     llm=llm,
     tools=code_tools,
+    verbose=True,
+)
+
+kaupan_kehittaja = Agent(
+    role="Kaupan liiketoiminnan kehittäjä",
+    goal="Ideoi ja konsultoi kaupan toiminnan parantamisessa ja uusien konseptien kehittämisessä",
+    backstory="Olet kokenut vähittäiskaupan asiantuntija. Yhdistät datasta saatuja oivalluksia käytännön liiketoiminnan kehittämiseen. Vastaat laajoihin kysymyksiin kaupan alan trendeistä.",
+    llm=llm,
+    tools=pm_tools + [search_web],
     verbose=True,
 )
 # === Konfigurointipohjaiset SQL-generaattorit ===
@@ -333,7 +343,7 @@ def build_crew(task_description: str) -> Crew:
         process=Process.sequential,
         verbose=True,
     )
-def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
+def build_dynamic_chat_crew(task_description: str, model_name: str, chat_history: list = None) -> Crew:
     """
     UI:n chatin käyttämä tiimi. Reitittää pyynnön oikealle asiantuntijalle
     ja käyttää UI:sta valittua kielimallia.
@@ -392,6 +402,11 @@ def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
             role=engineer.role, goal=engineer.goal, backstory=engineer.backstory,
             llm=chat_llm, tools=code_tools, verbose=True, allow_delegation=False
         )
+    elif any(kw in task_low for kw in ["kehitys", "idea", "parantaa", "strategi", "konsultoi", "trend", "miten"]):
+        active_agent = Agent(
+            role=kaupan_kehittaja.role, goal=kaupan_kehittaja.goal, backstory=kaupan_kehittaja.backstory,
+            llm=chat_llm, tools=pm_tools, verbose=True, allow_delegation=False
+        )
     else:  
         # Vapaa chat-viesti: Analyysipäällikkö hoitaa yleisluontoiset vastaukset
         active_agent = Agent(
@@ -399,11 +414,23 @@ def build_dynamic_chat_crew(task_description: str, model_name: str) -> Crew:
             llm=chat_llm, tools=pm_tools, verbose=True, allow_delegation=False
         )
 
+    # Muistin yhdistäminen
+    historia_teksti = ""
+    if chat_history:
+        historia_teksti = "=== AIEMPI KESKUSTELU ===\n"
+        for msg in chat_history[-6:]: # Max 6 viimeisintä
+            rooli = "KÄYTTÄJÄ" if msg.get('role') == 'user' else "SINA (AI)"
+            content = msg.get('content', '')
+            if "__CONTENT__" in content:
+                content = content.split("__CONTENT__")[-1]
+            historia_teksti += f"{rooli}: {content}\n\n"
+
     # 4. Määritetään itse tehtävä
     task_prompt = (
-        f"KÄYTTÄJÄN PYYNTÖ: {task_description}\n\n"
+        f"KÄYTTÄJÄN UUSIN PYYNTÖ: {task_description}\n\n"
+        f"{historia_teksti}"
         f"KÄYTETTÄVISSÄ OLEVA TIETOKANTADATA:\n{data_context}\n\n"
-        "Vastaa käyttäjän pyyntöön asiantuntevasti roolisi mukaisesti. Muotoile vastaus selkeällä Markdownilla."
+        "Vastaa käyttäjän pyyntöön asiantuntevasti roolisi mukaisesti. Huomioi aiempi keskustelu jos sellaista on. Muotoile vastaus selkeällä Markdownilla."
     )
 
     chat_task = Task(

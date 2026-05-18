@@ -29,7 +29,8 @@ def render_tab_insights():
                 f"{BACKEND_HOST}/api/chat",
                 json={
                     "message": prompt, 
-                    "model": current_model
+                    "model": current_model,
+                    "history": st.session_state.agent_chat_history
                 },
                 timeout=5
             )

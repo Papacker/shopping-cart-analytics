@@ -72,6 +72,7 @@ class ChatRequest(BaseModel):
     message: str
     model: str = "llama3.1:8b" # Vaihdettu vastaamaan nykyistä mallianne
     context: str = "Agenttichat"
+    history: List[Dict[str, str]] = []
 
 class ReportRequest(BaseModel):
     model: str = "qwen2.5-coder:7b" # Vaihdettu vastaamaan nykyistä mallianne
@@ -273,7 +274,7 @@ async def api_chat(req: ChatRequest, background_tasks: BackgroundTasks):
                     image_b64=img_b64
                 )
             else:
-                crew = build_dynamic_chat_crew(task_description=req.message, model_name=req.model)
+                crew = build_dynamic_chat_crew(task_description=req.message, model_name=req.model, chat_history=req.history)
                 update_status(generating=True, current_step="Analyysi käynnissä", reasoning="Agentit perkaavat dataa...")
                 result = crew.kickoff()
                 update_status(generating=False, current_step="Valmis", reasoning="Analyysi valmistui!", report_content=result.raw)
