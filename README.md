@@ -1,49 +1,59 @@
-# 🛒 UWB-Myymäläanalytiikka — Laitetaan parastamme
+# UWB-Myymäläanalytiikka — Laitetaan parastamme
 
 Tämä projekti analysoi myymälän asiakasliikennettä **UWB-paikannusdatan** (Ultra-Wideband) avulla.  
 Ostoskärryihin kiinnitetyt UWB-laitteet lähettävät sijaintitietoa, jonka pohjalta voidaan tutkia  
 esimerkiksi: *missä osastoilla kärry viipyy, kuinka kauan yksi ostoskerta kestää ja mitkä alueet ovat ruuhkaisimpia.*
 
-Projekti koostuu kolmesta pääosasta:
+Projekti koostuu neljästä pääosasta:
 
 | Osa | Kuvaus |
 |---|---|
-| **ETL-putki** (`main.py`) | Lukee CSV-tiedostot, puhdistaa datan ja tallentaa sen tietokantaan sekä parquet muodossa data/processed kansioon. |
-| **Streamlit-dashboard** (`src/app.py`) | Interaktiivinen selainpohjainen analysointinäkymä. |
-| **AI-agentti** (`agentti/crew.py`) | Tekoälyagentti, jonka avulla käyttäjä voi kysellä haluamiaan tietoja tietokannasta ja saada vastaukseksi selkeän raportin suomeksi. |
+| **ETL-putki** (`main.py`) | Lukee CSV-tiedostot, puhdistaa datan ja tallentaa sen tietokantaan sekä parquet-muodossa **data/processed**-kansioon. |
+| **Streamlit-dashboard** (`src/app.py`) | Selainpohjainen analysointinäkymä (7 välilehteä). |
+| **FastAPI-backend** (`src/backend.py`) | REST-rajapinta agentin ohjaukseen, heatmapin generointiin ja raporttien luontiin. |
+| **AI-agentti** (`agentti/crew.py`) | Tekoälyagentti jonka kielimallin voi valita useammasta vaihtoehdosta. Tämän avulla käyttäjä voi kysellä tietoja tietokannasta ja saada vastaukseksi selkeän raportin suomeksi. Agentti muistaa jo käydyn keskustelun. |
 
 ---
 
-## 📋 Vaatimukset
+## Vaatimukset
 
-Varmista ennen asennusta, että koneellasi on seuraavat ohjelmat:
+Varmista ennen käyttöä, että koneellasi on seuraavat ohjelmat, koodieditoreista voit valita kumman itse haluat, et siis tarvitse molempia.
 
 | Ohjelma | Versio | Käyttötarkoitus |
 |---|---|---|
 | **Visual Studio Code** | ≥ 1.119 | Koodieditori |
+| **Antigravity IDE** | 1.23.2 | Koodieditori |
 | **Python** | ≥ 3.11 | Ohjelmointikieli |
 | **uv** | ≥ 0.11.12 | Python-pakettien hallinta |
 | **Ollama** | ≥ 0.23.1 | AI-mallin ajaminen paikallisesti |
 
 ### Ohjelmien asennus
 
+**Huom:** Ollama ja AI-malli tarvitaan **vain**, jos haluat käyttää AI-agenttia.  
+Streamlit-käyttöliittymä ja ETL-putki toimivat ilman Ollamaa.
+
+**Aja terminaalissa seuraavat komennot:**
 ```bash
 # 1. uv (Python-paketinhallinta)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. Ollama (Ajaa kielimalleja paikallisesti)
+# 2. Asenna ja ota käyttöön oikea Python-versio uv:n avulla
+uv python install 3.11
+
+# 3. Ollama (Ajaa kielimalleja paikallisesti)
 curl -fsSL https://ollama.com/install.sh | sh
 
-# 3. Ladataan AI-malli (~9 GB) — tarvitaan vain agentin käyttöön
-ollama pull qwen2.5-coder:14b
+# 4. Ladataan käytettävä AI-malli — tarvitaan vain mikäli käytät agenttia.
+# Voit aloittaa kokeilun lataamalla esimerkiksi jonkun seuraavista vaihtoehdoista alla olevilla komennoilla.
+ollama pull qwen3.6:35b-a3b     # ~22 GB, suositus — paras yleisanalyysiin
+ollama pull llama3.1:8b         # ~5 GB, tasapainoinen vaihtoehto
+ollama pull qwen2.5-coder:14b   # ~9 GB, koodianalyysiin erikoistunut
+ollama pull qwen2.5-coder:7b    # ~4 GB, kevyempi koodivaihtoehto
 ```
-
-> **Huom:** Ollama ja AI-malli tarvitaan **vain**, jos haluat käyttää AI-agenttia (`agentti/crew.py`).  
-> Streamlit-dashboard ja ETL-putki toimivat ilman Ollamaa.
 
 ---
 
-## ⚙️ Projektin asennus
+## Projektin asennus
 
 ```bash
 # 1. Kloonaa repositorio
@@ -54,7 +64,7 @@ cd projektiopinnot-1-datan-hallinta-laitetaan-parastamme
 uv sync
 ```
 
-### Raakadatan sijoittaminen
+### Raakadatan lisääminen
 
 Kopioi UWB-laitteiden tuottamat CSV-tiedostot hakemistoon:
 
@@ -66,54 +76,88 @@ ETL-putki käsittelee automaattisesti kaikki sieltä löytämänsä tiedostot.
 
 ---
 
-## 🔐 Ympäristömuuttujat
+## Ympäristömuuttujat
 
-Luo projektin **juurikansioon** tiedosto nimeltä `.env` ja lisää siihen seuraavat rivit.  
-*(Tiedostoa ei tallenneta Gitiin.)*
+Luo projektin **juurikansioon** tiedosto nimeltä **.env**, voit kopioida tiedostoon seuraavan oletusarvoisen sisällön:
 
-```dotenv
-# Ollama-asetukset (tarvitaan vain AI-agentin käyttöön)
-OLLAMA_HOST=http://127.0.0.1:11434
-APP_OLLAMA_MODEL=qwen2.5-coder:14b
 ```
+# Ollama-palvelimen paikallinen oletusarvoinen osoite
+OLLAMA_HOST=http://127.0.0.1:11434
+APP_OLLAMA_MODEL=qwen3.6:35b-a3b
+
+# Oletuskielimalli on qwen3.6:35b-a3b (käytetään komentoriviltä agenttitiimille keskusteltaessa)
+# Käyttöliittymää käytettäessä se hakee mallit automaattisesti Ollama-palvelimelta ja näyttää ne listana.
+
+# Esimerkkivaihtoehtoja (Muista asentaa ensin terminaalin kautta: ollama pull <malli>):
+#   qwen3.6:35b-a3b
+#   llama3.1:8b
+#   qwen2.5-coder:14b
+#   qwen2.5-coder:7b
+```
+
+**.env**-tiedosto ei tallennu Gitiin.
+
 
 | Muuttuja | Oletusarvo | Selitys |
 |---|---|---|
-| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollamapalvelimen osoite |
-| `APP_OLLAMA_MODEL` | `qwen2.5-coder:14b` | Käytettävä kielimalli |
+| `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama-palvelimen osoite |
+| `APP_OLLAMA_MODEL` | `qwen3.6:35b-a3b` | Oletuskielimalli **komentorivikäytölle** |
 
 ---
 
-## 🚀 Käyttö
+## Käyttö
 
-### 1. Streamlit-dashboard (suositeltava tapa aloittaa)
+### 1. launcher.py tiedosto — suositeltava tapa käynnistää koko projekti
 
+**Aja terminaalissa komento:**
 ```bash
-uv run streamlit run src/app.py
+uv run scripts/launcher.py
 ```
 
-Avaa selaimessa: **http://localhost:8501**
+Tämä käynnistää automaattisesti:
+- **FastAPI-backendin** portissa `8000`
+- **Streamlit-frontendin** portissa `8501`
 
-Dashboardissa on kuusi välilehteä:
+Avaa selaimessa: **http://localhost:8501**  
+
+Sivustolla sinulla on käytettävissä seitsemän välilehteä.
 
 | Välilehti | Sisältö |
 |---|---|
-| 🏥 **Datan laatu** | Näyttää hylättyjen rivien syyt ja tilastot |
-| 🚶 **Liikennevirrat** | Käyntimäärät ajan suhteen |
-| 🏪 **Osastoanalyysi** | Ostoskärryjen viipymä eri osastoilla |
-| 🛒 **Kärrydynamiikka** | Yksittäisten kärryjen käyttäytyminen |
-| 🔥 **Heatmap** | Lämpökartta kärryjen liikkeistä pohjakuvalla |
-| 🧠 **Advanced insights** | Edistyneet analyysit |
+| **Datan laatu** | Näyttää hylättyjen rivien syyt ja tilastot |
+| **Liikennevirrat** | Käyntimäärät ajan suhteen |
+| **Osastoanalyysi** | Ostoskärryjen viipymä eri osastoilla |
+| **Kärrydynamiikka** | Yksittäisten kärryjen käyttäytyminen |
+| **Heatmap** | Lämpökartta kärryjen liikkeistä pohjakuvalla |
+| **Advanced insights** | Edistyneet analyysit |
+| **Asiakkaalle** | Tekoälyagentin chat-näkymä ja raporttien generointi |
 
 **ETL-putken ajaminen dashboardista:**  
 Sivupalkissa on nappi **"🚀 Aja ETL-putki"** — paina sitä ensimmäisellä käyttökerralla tai kun lisäät uusia CSV-tiedostoja.
 
+**Kielimallin valinta:**  
+Sivupalkissa voit valita, mitä Ollama-mallia agentti käyttää. Dashboard hakee automaattisesti saatavilla olevat mallit Ollama-palvelimelta ja listaa ne valikkoon.
+
+Kun haluat lopettaa sovelluksen käyttämisen, paina terminaalissa **Ctrl+C**
+
 ---
 
-### 2. ETL-putki komentoriviltä
+### 2. Streamlit-dashboardin manuaalinen käynnistys
 
-Jos haluat ajaa datan käsittelyn suoraan terminaalista:
+**Aja terminaalissa komento:**
+```bash
+uv run streamlit run src/app.py
+```
 
+Avaa selaimessa osoite: **http://localhost:8501**
+
+Lopetus terminaalissa **Ctrl+C**
+
+---
+
+### 3. ETL-putken käyttäminen komentoriviltä
+
+Jos haluat ajaa datan käsittelyn suoraan terminaalista, kirjoita komento:
 ```bash
 uv run python main.py
 ```
@@ -126,9 +170,22 @@ ETL-putki:
 
 ---
 
-### 3. AI-agentti
+### 4. AI-agentti
 
-AI-agentti analysoi tietokantadataa ja kirjoittaa raportin suomeksi.
+AI-agenttitiimi analysoi tietokantadataa ja kirjoittaa raportin suomeksi.  
+Agenttitiimissä on viisi erikoistunutta roolia:
+
+| Rooli | Tehtävä |
+|---|---|
+| **Manager** | Koordinoi tiimiä ja raportoi tulokset suomeksi|
+| **Analyst** | SQL-analyysit ja markdown-raporttien kirjoittaminen |
+| **Engineer** | Kaaviot ja heatmapit Python-koodilla |
+| **Liiketoiminta-agentti** | Laskenta ja visualisoinnit, tuloksien tallentaminen erilliseen kansioon |
+| **Kaupan kehittäjä** | Liiketoiminnan konsultointi ja internet-haku |
+
+**Agentilla on keskustelumuisti** — se muistaa aiemmat kysymykset ja pyrkii vastaamaan jatkokysymyksiin aiemman keskustelun huomioiden.
+
+#### AI-agentin käyttäminen komentoriviltä
 
 ```bash
 # Käynnistä Ollama taustalle
@@ -138,15 +195,17 @@ ollama serve &
 uv run python agentti/crew.py
 ```
 
-Seuraavaksi agentti kysyy "Mitä tiimin pitäisi tehdä?"
+Seuraavaksi agentti kysyy tehtävää:
 
 ```
-Mitä tiimin pitäisi tehdä? > Analysoi kärrydataa ja tee raportti
+Mitä tiimin pitäisi tehdä?
 ```
 
-Vastaus tulostuu terminaaliin ja raportti tallentuu myös tiedostoon: `agentti/workspace/raportti.md`
+Kirjoita haluamasi kysymys, vastaus tulostuu terminaaliin ja raportti tallentuu tiedostoon: `agentti/workspace/raportti.md`
 
-### 4. Testien ajaminen
+---
+
+### 5. Testien ajaminen komentoriviltä
 
 ```bash
 # Aja testit kaikille tiedostoille
@@ -162,13 +221,17 @@ uv run pytest tests/test_crew.py -v
 
 ---
 
-### 5. Yksittäiset Jupyter-notebookit
+### 6. Yksittäiset Jupyter-notebookit
 
 Notebookit sisältävät yksityiskohtaisia analyysejä ja kokeiluja:
 
 ```bash
 uv run jupyter lab
 ```
+
+Avaa selaimessa osoite: http://localhost:8888
+
+Lopetus terminaalissa **Ctrl+C**
 
 | Notebook | Sisältö |
 |---|---|
@@ -182,13 +245,15 @@ uv run jupyter lab
 
 ---
 
-## 🧰 Teknologiapino
+## Teknologiat
 
 | Teknologia | Versio | Rooli |
 |---|---|---|
 | **Python** | ≥ 3.11 | Ohjelmointikieli |
 | **DuckDB** | ≥ 1.5 | SQL-tietokanta |
 | **Streamlit** | ≥ 1.56 | Interaktiivinen web-dashboard |
+| **FastAPI** | ≥ 0.136 | REST-backend AI-agentin käyttöön |
+| **Uvicorn** | ≥ 0.42 | ASGI-palvelin FastAPI:lle |
 | **Pandas** | ≥ 3.0 | Datan käsittely |
 | **NumPy** | ≥ 2.4 | Numeerinen laskenta |
 | **Matplotlib** | ≥ 3.10 | Kaavioiden piirto |
@@ -197,40 +262,11 @@ uv run jupyter lab
 | **SciPy** | ≥ 1.17 | Tieteellinen laskenta (heatmap-suodatus) |
 | **CrewAI** | ≥ 1.12 | AI-agenttikehys |
 | **Ollama** | ≥ 0.23.1 | Paikallinen LLM-palvelin |
+| **DuckDuckGo Search** | ≥ 8.1 | Agentin internet-hakutyökalu |
 | **uv** | ≥ 0.11.12 | Python-paketinhallinta |
-
-### Hakemistorakenne
-
-```
-.
-├── main.py                  # ETL-putken pääohjelma
-├── src/
-│   ├── app.py               # Streamlit-sovellus
-│   ├── charts.py            # Kaavioiden piirtologiikka
-│   ├── processor.py         # Datan puhdistusluokka (StoreDataCleaner)
-│   ├── queries.py           # SQL-kyselyt
-│   ├── style.css            # Dashboardin ulkoasu
-│   └── tabs/                # Dashboard-välilehdet (tab1–tab6)
-├── agentti/
-│   ├── crew.py              # AI-agenttien kokoonpano ja käynnistys
-│   ├── tools/               # Agentin työkalut (SQL, tiedostot, Python)
-│   └── workspace/           # Agentin tallentamat raportit
-├── database/
-│   ├── schema_duckdb.sql    # Tietokantaskeema
-│   └── store.db             # DuckDB-tietokanta (ei Gitissä)
-├── config/
-│   └── store_config.py      # Myymälän pohjakartta ja osastorajat
-├── data/
-│   ├── raw/                 # Alkuperäiset CSV-tiedostot (ei Gitissä)
-│   └── processed/           # ETL:n tuottamat Parquet-tiedostot (ei Gitissä)
-├── notebooks/               # Jupyter-notebookit
-├── tests/                   # Automaattiset testit
-└── pyproject.toml           # Projektin riippuvuudet
-```
 
 ---
 
-## 📄 Tekijät
+## Tekijät
 
 **Suvi Niemi, Teo Juurinen, Mikko Valkealahti, Juhani Rautio**
-
