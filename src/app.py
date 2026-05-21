@@ -181,8 +181,8 @@ def main():
         "🚶 Liikennevirrat",
         "🏪 Osastoanalyysi",
         "🛒 Kärrydynamiikka",
-        "🔥 Heatmap",
-        "🧠 Advanced insights",
+        "🔥 Lämpökartat",
+        "🧠 Syvälliset havainnot",
         "✨ Asiakkaalle"
     ])
 

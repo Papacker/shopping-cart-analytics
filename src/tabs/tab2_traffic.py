@@ -4,7 +4,7 @@ from src.queries import get_traffic_visits
 from src.charts import create_duration_histogram, create_hourly_bar_chart, create_weekday_bar_chart
 
 def render_tab_traffic():
-    st.subheader("🌊 2. Liikennevirrat (Operatiivinen yleiskuva)")
+    st.subheader("🌊 2. Liikennevirrat yleiskuva")
 
     df_visit = get_traffic_visits()
 

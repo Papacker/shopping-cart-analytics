@@ -4,7 +4,7 @@ from src.queries import get_health_metrics, get_dt_metrics, get_quality_reasons
 from src.charts import create_pie_chart
 
 def render_tab_health():
-    st.subheader("🛠️ 1. ETL Audit & Data Quality")
+    st.subheader("🛠️ 1. ETL auditointi & datan laatu")
     st.info("💡 **Miksi näytämme tämän?** Tämä välilehti tekee läpinäkyväksi ETL-putkemme toiminnan. UWB-raakadata sisältää valtavasti laitekohinaa ja paikallaan olevia kärryjä. Oheinen korkea hylkäysprosentti todistaa, että laitekohina on onnistuneesti eristetty puhtaasta datasta. Muut välilehdet käyttävät vain 100% puhtaita, validoituja asiakaskierroksia.")
     
     col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
@@ -52,7 +52,7 @@ def render_tab_health():
         ]
         df_funnel = pd.DataFrame(funnel_data)
 
-        st.markdown("### 🌪️ Data Cleaning Funnel")
+        st.markdown("### 🌪️ Datan puhdistussiilo")
         st.caption("Visualisointi näyttää datan jalostumisen raakamassasta puhtaaksi tiedoksi. Jokainen porras karsii virheellistä tai epärelevanttia dataa.")
         
         from src.charts import create_etl_funnel

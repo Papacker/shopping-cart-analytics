@@ -35,7 +35,7 @@ def cm_to_px(x_cm, y_cm, prof, real_w, real_h):
     return px_x, px_y
 
 def render_tab_heatmap():
-    st.subheader("🔥 5. Lämpökartat (Spatiaalinen käyttäytyminen)")
+    st.subheader("🔥 5. Lämpökartat")
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
     PROFIILIT = store_config['geometry']['map_profiles']

@@ -75,14 +75,14 @@ def render_tab_dynamics():
         st.pyplot(fig_heat, width='stretch')
 
     with col_right:
-        st.markdown("### 🛒 Kärryjen suosio (Sessiot)")
+        st.markdown("### 🛒 Kärryjen suosio")
         st.caption("Kuinka monta asiakasmatkaa kukin kärry (Node ID) on tehnyt tänään.")
         st.bar_chart(df_util.set_index('node_id')['avg_visits_per_day'], color="#4cc9f0", width='stretch')
 
     st.divider()
 
     # 4. MATKAMITTARI (Odometer) - MIELENKIINTOISTA DATAA
-    st.markdown("### 🛣️ Kärryjen matkamittari (Odometer)")
+    st.markdown("### 🛣️ Kärryjen matkamittari")
     st.info(
         "Tämä mittari kertoo, kuinka monta kilometriä kukin kärry on todellisuudessa rullannut "
         "asiakkaiden mukana. Se on dynaamisesti laskettu kunkin reissun koordinaattien perusteella.",

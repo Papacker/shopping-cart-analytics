@@ -49,7 +49,7 @@ def create_hourly_bar_chart(df_hourly, peak_val=None):
     for spine in ax.spines.values():
         spine.set_edgecolor('#333')
         
-    plt.title("Asiakasvirrat aukioloaikoina (Pinkki teema)", color='white', pad=20)
+    plt.title("Asiakasvirrat aukioloaikoina", color='white', pad=20)
     plt.tight_layout()
     return fig
 
@@ -83,7 +83,7 @@ def create_duration_histogram(df_visits, mean_val=None, median_val=None):
     for spine in ax.spines.values():
         spine.set_edgecolor('#333')
         
-    plt.title("Asiointiajan jakauma (0-90 min)", color='white')
+    plt.title("Asiointiajan jakauma", color='white')
     plt.tight_layout()
     return fig
 
@@ -118,7 +118,7 @@ def create_weekday_bar_chart(df_weekday):
     for spine in ax.spines.values():
         spine.set_edgecolor('#333')
         
-    plt.title("Vierailut viikonpäivittäin (Korkein päivä korostettu)", color='white', pad=20)
+    plt.title("Vierailut viikonpäivittäin", color='white', pad=20)
     plt.tight_layout()
     return fig
 
@@ -372,7 +372,7 @@ def create_weather_correlation_chart(df_merged):
     for spine in ax1.spines.values():
         spine.set_edgecolor('#333')
     
-    plt.title("SÄÄTILA VS. ASIAKASVIRRAT (Järvenpää)", color='white', pad=25, fontsize=16, fontweight='bold')
+    plt.title("SÄÄTILA VS. ASIAKASVIRRAT", color='white', pad=25, fontsize=16, fontweight='bold')
     fig.autofmt_xdate()
     
     # Legenda yhdistettynä
@@ -433,7 +433,7 @@ def create_etl_funnel(df_funnel):
 
     ax.set_xlim(-max_val*0.4, max_val*1.4)
     ax.axis('off')
-    plt.title("ETL DATA CLEANING FUNNEL\n(Sessioiden jalostusprosessi)", color='white', pad=30, fontsize=14, fontweight='bold')
+    plt.title("Sessioiden jalostusprosessi", color='white', pad=30, fontsize=14, fontweight='bold')
     
     plt.tight_layout()
     return fig

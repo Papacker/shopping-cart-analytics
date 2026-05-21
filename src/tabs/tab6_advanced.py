@@ -5,7 +5,7 @@ from src.queries import get_department_flow, get_daily_visits, get_table_counts
 from src.charts import create_horizontal_bar_chart, create_weather_correlation_chart
 
 def render_tab_advanced():
-    st.subheader("🧠 6. Advanced Insights")
+    st.subheader("🧠 6. Syvälliset havainnot")
     st.markdown("Syvällisempiä liiketoimintahavaintoja: Osastojen vetovoima, viipymäanalyysi ja ulkoisen säädatan vaikutus.")
     
     # 1. KPI-rivi: Konversio ja yleiskuva
