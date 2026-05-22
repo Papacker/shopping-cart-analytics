@@ -22,3 +22,7 @@ config/__init__.py
 
 # Testaus
 .coverage
+
+# Muut
+.vscode
+.streamlit
