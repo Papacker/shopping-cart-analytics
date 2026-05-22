@@ -87,18 +87,15 @@ def create_duration_histogram(df_visits, mean_val=None, median_val=None):
     plt.tight_layout()
     return fig
 
-
 def create_weekday_bar_chart(df_weekday):
-    """Luo vaaleansinisen viikonpäiväkaavion, jossa suosituin päivä on pinkki."""
+    """Luo vaaleansinisen viikonpäiväkaavion ilman päätylukuja, jossa suosituin päivä on pinkki."""
     fig, ax = plt.subplots(figsize=(10, 5))
     fig.patch.set_facecolor('#0e1117')
     ax.set_facecolor('#1a1d23')
     
-    # Väritetään: Vaaleansininen (#4cc9f0), mutta suosituin päivä pinkki (#f72585)
     max_c = df_weekday['count'].max()
     colors = ['#f72585' if c == max_c else '#4cc9f0' for c in df_weekday['count']]
     
-    # Lisätään pieni gradientti alfan avulla (pitempi palkki = kirkkaampi)
     base_alpha = 0.5
     alphas = [1.0 if c == max_c else (base_alpha + (c/max_c)*(1-base_alpha)) for c in df_weekday['count']]
     
@@ -106,11 +103,7 @@ def create_weekday_bar_chart(df_weekday):
     
     for bar, alpha in zip(bars, alphas):
         bar.set_alpha(alpha)
-    
-    # Lisätään lukumäärät palkkien päälle
-    for i, v in enumerate(df_weekday['count']):
-        ax.text(i, v + (max_c * 0.02), f"{int(v)}", 
-                color='white', ha='center', fontweight='bold')
+
 
     ax.set_ylabel("Sessiot", color='white')
     ax.tick_params(colors='white')
@@ -121,7 +114,6 @@ def create_weekday_bar_chart(df_weekday):
     plt.title("Vierailut viikonpäivittäin", color='white', pad=20)
     plt.tight_layout()
     return fig
-
 
 def create_departments_bar_chart(df_dep):
     """Luo vaakapalkkikaavion suosituimmista osastoista."""

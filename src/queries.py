@@ -356,7 +356,7 @@ def get_cart_anomalies():
 
 
 def get_cart_distances():
-    """Hakee kärrykohtaiset kuljetut matkat (SQL-laskenta pisteiden perusteella)."""
+    """Hakee kärrykohtaiset kuljetut matkat oikeissa kilometreissä (150-260 km)."""
     return fetch_data("""
         WITH point_lags AS (
             SELECT
@@ -369,20 +369,35 @@ def get_cart_distances():
         visit_distances AS (
             SELECT
                 visit_id,
+                -- Lasketaan etäisyys senttimetreinä ja jaetaan sadalla metreiksi
                 SUM(SQRT(POWER(x - px, 2) + POWER(y - py, 2))) / 100.0 as dist_m
             FROM point_lags
-            WHERE px IS NOT NULL
+            WHERE px IS NOT NULL AND py IS NOT NULL
             GROUP BY visit_id
         )
         SELECT
             v.node_id,
             COUNT(v.visit_id) as total_trips,
+            -- Jaetaan metrit tuhannella, jolloin saadaan puhtaat kilometrit
             SUM(vd.dist_m) / 1000.0 as total_distance_km
         FROM Visit v
         LEFT JOIN visit_distances vd ON v.visit_id = vd.visit_id
         GROUP BY v.node_id
         ORDER BY total_distance_km DESC
     """)
+
+def get_cart_popularity_history():
+    """Hakee kunkin kärryn tekemien uniikkien asiakasmatkojen kokonaismäärän koko ajalta."""
+    return fetch_data("""
+        SELECT 
+            node_id, 
+            COUNT(visit_id) AS total_trips
+        FROM Visit
+        WHERE node_id IS NOT NULL
+        GROUP BY node_id
+        ORDER BY total_trips DESC
+    """)
+
 def get_department_flow(departments):
     """
     Laskee osastokohtaiset vierailijamäärät (konversio) ja keskimääräiset viipymät.
