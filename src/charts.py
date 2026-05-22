@@ -422,3 +422,47 @@ def create_etl_funnel(df_funnel):
     
     plt.tight_layout()
     return fig
+
+def create_routes_chart(img, df_route, cm_to_px_func, profiili, real_w, real_h, valitut_id_list):
+    """
+    Piirtää tasan ne yksittäiset vierailut, jotka käyttäjä on poiminut käyttöliittymästä.
+    Määritetty charts.py-tiedostoon projektirakenteen mukaisesti.
+    """
+    fig, ax = plt.subplots(figsize=(16, 8))
+    fig.patch.set_facecolor('#0e1117')
+    ax.set_facecolor('#0e1117')
+
+    # Taustakartta alle
+    ax.imshow(img, extent=[0, real_w, real_h, 0], aspect='equal', zorder=0)
+
+    if df_route.empty or len(valitut_id_list) == 0:
+        return fig
+
+    # Piirretään vain valitut reitit
+    for vid in valitut_id_list:
+        df_v = df_route[df_route['visit_id'] == vid].sort_values('zone_id')
+        if len(df_v) < 2:
+            continue
+
+        # Koordinaattimuunnos
+        px_x, px_y = cm_to_px_func(df_v['x'].values, df_v['y'].values, profiili, real_w, real_h)
+
+        # Tehdään jokaisesta valitusta reitistä hieman eri värinen, jotta ne erottuvat toisistaan
+        line, = ax.plot(px_x, px_y, alpha=0.7, linewidth=2, zorder=1, label=f"Vierailu {vid[:6]}...")
+
+        # Aloituspiste (Vihreä pallo) käyttää reitin omaa väriä reunassa
+        ax.scatter(px_x[0], px_y[0], color='#4ecc5c', s=60, edgecolors='white', linewidths=0.7, zorder=2)
+        
+        # Lopetuspiste / Kassat (Pinkki neliö)
+        ax.scatter(px_x[-1], px_y[-1], color='#f72585', marker='s', s=60, edgecolors='white', linewidths=0.7, zorder=2)
+
+    ax.set_title(f"Valitut asiointireitit ({len(valitut_id_list)} kpl)", color='white', fontsize=12, pad=10, loc='left')
+    ax.set_xlim(0, real_w)
+    ax.set_ylim(real_h, 0)
+    ax.axis('off')
+    
+    if len(valitut_id_list) > 0:
+        ax.legend(facecolor='#1a1d23', labelcolor='white', loc='lower right', framealpha=0.8, edgecolor='#333', fontsize=9)
+    
+    plt.tight_layout()
+    return fig
