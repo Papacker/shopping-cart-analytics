@@ -30,21 +30,13 @@ def render_tab_advanced():
     
     st.divider()
     
-    # 2. Ylärivi: Osastovertailut rinnakkain
-    col_pop, col_dwell = st.columns(2)
+    # 2. Viipymät - vain yksi sarake (osastotiedot jo tab3_checkout.py:ssä)
+    col_dwell = st.columns(1)
     
     if not df_flow.empty:
-        with col_pop:
-            st.markdown("### 🔥 Suosituimmat osastot")
-            st.caption("Uniikit vierailut per osasto")
-            suosituimmat = df_flow.head(8).sort_values('unique_visits', ascending=True)
-            df_plot_pop = suosituimmat.rename(columns={'zone': 'Osasto', 'unique_visits': 'Osumat'})
-            fig_pop = create_horizontal_bar_chart(df_plot_pop, '#f72585', x_label='Uniikit käynnit')
-            st.pyplot(fig_pop, width='stretch')
-            
-        with col_dwell:
-            st.markdown("### ⏳ Pisimmät viipymät")
-            st.caption("Keskimääräinen aika osastolla (min)")
+        with col_dwell[0]:
+            st.markdown("### ⏳ Pisimmät viipymät osastoittain")
+            st.caption("Keskimääräinen aika osastolla (min) - Top 8 pisintä")
             viipyma = df_flow.sort_values('avg_dwell_min').tail(8)
             df_plot_dwell = viipyma.rename(columns={'zone': 'Osasto', 'avg_dwell_min': 'Osumat'})
             fig_dwell = create_horizontal_bar_chart(df_plot_dwell, '#4cc9f0', x_label='Aika (min)')
@@ -101,11 +93,11 @@ def render_tab_advanced():
             except Exception as e:
                 st.error(f"Virhe säädatan haussa: {e}")
 
-    # 4. Alin osa: Taulukko
-    with st.expander("📊 Näytä tarkat osastokohtaiset konversiotiedot"):
+    # 4. Alin osa: Viipymätaulukko (ei osastosuorituskykyä - katso tab3)
+    with st.expander("📊 Näytä tarkat viipymätiedot osastoittain"):
         if not df_flow.empty:
             df_all = df_flow.copy()
-            df_all['Konversio %'] = (df_all['unique_visits'] / total_visits * 100).round(1)
+            df_all = df_all.sort_values('avg_dwell_min', ascending=False)
             st.dataframe(
                 df_all.rename(columns={
                     'zone': 'Osasto', 

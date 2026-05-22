@@ -140,11 +140,8 @@ def create_departments_bar_chart(df_dep):
     colors = plt.cm.viridis(np.linspace(0, 0.8, len(df)))
     bars = ax.barh(df['zone'], df['käynnit'], color=colors, edgecolor='none')
     
-    # Lisätään arvot palkkien päähän
     for bar in bars:
         width = bar.get_width()
-        ax.text(width + (max(df['käynnit'])*0.01), bar.get_y() + bar.get_height()/2, 
-                f'{int(width)}', color='white', va='center', fontsize=9)
 
     ax.set_xlabel("Vierailut (kpl)", color='white')
     ax.tick_params(colors='white')
@@ -318,12 +315,8 @@ def create_horizontal_bar_chart(df, color_code, x_label='Vierailut'):
     
     bars = ax.barh(df['Osasto'], df['Osumat'], color=color_code, edgecolor='none', alpha=0.8)
     
-    # Lisätään arvot palkkien päähän
     for bar in bars:
         width = bar.get_width()
-        ax.text(width + (width*0.02), bar.get_y() + bar.get_height()/2, 
-                f'{width:.1f}' if width < 100 else f'{int(width):,}', 
-                color='white', va='center', fontsize=10, fontweight='bold')
 
     ax.tick_params(colors='white', labelsize=11)
     ax.set_xlabel(x_label, color='white', fontsize=12)
