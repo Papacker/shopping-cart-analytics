@@ -6,7 +6,7 @@ from src.charts import create_horizontal_bar_chart, create_weather_correlation_c
 
 def render_tab_advanced():
     st.subheader("🧠 6. Syvälliset havainnot")
-    st.markdown("Syvällisempiä liiketoimintahavaintoja: Osastojen vetovoima, viipymäanalyysi ja ulkoisen säädatan vaikutus.")
+    st.markdown("Syvällisempiä liiketoimintahavaintoja: Viipymäanalyysi ja ulkoisen säädatan vaikutus.")
     
     # 1. KPI-rivi: Konversio ja yleiskuva
     counts = get_table_counts()
