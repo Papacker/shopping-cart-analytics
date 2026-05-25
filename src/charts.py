@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-
+from config.store_config import store_config
 
 def create_pie_chart(df_health):
     """Luo piirakkakaavion datan laadusta."""
@@ -256,10 +256,11 @@ def create_maintenance_status_chart(df_sorted, limit_km):
     return fig
 
 
-def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w, real_h, sample_pct, v_max=None):
+def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w, real_h, sample_pct, v_max=None, cmin=None, num_days=1):
     """
-    Luo korkealaatuisen lämpökartan. 
-    Käyttää YlOrRd-värikarttaa ja parempaa tiheyden hallintaa.
+    Luo upean, silotellun ja jatkuvan lämpökartan (KDE/thermal aura).
+    Käyttää 2D-histogrammia, joka pehmennetään Gaussin suodattimella (Gaussian Blur).
+    Taustakohina maskataan kokonaan läpinäkyväksi, jolloin pohjakartta näkyy täydellisesti.
     """
     if len(px_x) == 0:
         fig, ax = plt.subplots()
@@ -270,21 +271,72 @@ def create_heatmap_chart(img, px_x, px_y, bins_val, colormap, alpha_val, real_w,
     fig.patch.set_facecolor('#0e1117')
     ax.set_facecolor('#0e1117')
 
-    # Pohjakuva
+    # 1. Piirretään pohjakuva
     ax.imshow(img, extent=[0, real_w, real_h, 0], aspect='equal', zorder=0)
 
-    # Heatmap overlay
-    h = ax.hist2d(
-        px_x, px_y, bins=bins_val, 
-        range=[[0, real_w], [0, real_h]],
-        cmap=colormap, alpha=alpha_val, cmin=1, zorder=1,
-        vmax=v_max if v_max and v_max > 0 else None
+    # 2. Lasketaan 2D-histogrammi asymmetrisellä ruudukolla kuvasuhteen mukaan (neliömäiset solut!)
+    grid_bins_x = max(150, bins_val)
+    grid_bins_y = int(grid_bins_x * (real_h / real_w))
+    
+    h, xedges, yedges = np.histogram2d(
+        px_x, px_y, bins=(grid_bins_x, grid_bins_y), 
+        range=[[0, real_w], [0, real_h]]
+    )
+
+    # 2.2. Leikataan (clip) äärimmäiset piikit (kuten pitkään kassoilla seisovat kärryt)
+    # Cappaamalla arvo 98. persentiiliin estetään kassoja jyräämästä muuta kauppaa.
+    h_nonzero = h[h > 0]
+    if len(h_nonzero) > 0:
+        clip_limit = np.percentile(h_nonzero, 98)
+        h = np.clip(h, 0, clip_limit)
+
+    # 3. Transponoidaan ja sovelletaan logaritmista skaalausta (log1p) ENNEN sumennusta
+    # Tämä puristaa dynaamisen alueen ja estää käytäväliikenteen dilutoitumisen Gaussin blurrin aikana!
+    h_log = np.log1p(h.T)
+
+    # 4. Silotellaan Gaussin suodattimella (Gaussian Blur)
+    from scipy.ndimage import gaussian_filter
+    sigma_val = 2.2  # Tiukempi sumennus (3.5 -> 2.5 -> 2.2) rajaa reitit siististi myymälän seinien sisäpuolelle
+    h_smoothed = gaussian_filter(h_log, sigma=sigma_val)
+
+    # 5. Maskataan taustakohina (alueet joilla ei ole osumia) täysin läpinäkyviksi.
+    # Kynnysarvo 5% maksimista rajaa taustamelun ja tyhjät hyllyt siististi pois!
+    threshold = h_smoothed.max() * 0.05
+    h_masked = np.ma.masked_where(h_smoothed < threshold, h_smoothed)
+
+    # 6. Luodaan dynaamisesti pehmeästi haalistuva värikartta (alpha kytketty tiheyteen)
+    import matplotlib.colors as mcolors
+    base_cmap = plt.get_cmap(colormap)
+    color_list = base_cmap(np.linspace(0, 1, 256))
+    # Läpinäkyvyys nousee pehmeästi: alussa 0.35 (parantaa näkyvyyttä valkoisella pohjalla), lopussa 0.95 (paksu väri)
+    color_list[:, -1] = np.linspace(0.35, 0.95, 256)
+    custom_cmap = mcolors.ListedColormap(color_list)
+
+    # Käytetään kiinteätä vertailukelpoista maksimia (vmax = 4.5), jotta "kaikki päivät", 
+    # "perjantai" ja "sunnuntai" erottuvat visualisoinnissa toisistaan täysin selkeästi!
+    scale_max = 4.5
+
+    im = ax.imshow(
+        h_masked, 
+        extent=[0, real_w, real_h, 0], 
+        aspect='equal', 
+        zorder=1, 
+        cmap=custom_cmap, 
+        alpha=1.0,  # Käytetään värikartan omaa dynaamista läpinäkyvyyttä
+        interpolation='bilinear',
+        vmax=scale_max
     )
 
     # Väripalkki
-    cb = fig.colorbar(h[3], ax=ax, shrink=0.6, pad=0.02)
-    cb.set_label('Käyntitiheys', color='white')
+    cb = fig.colorbar(im, ax=ax, shrink=0.6, pad=0.02)
+    cb.set_label('Käyntitiheys (Suhteellinen / Log)', color='white')
     cb.ax.yaxis.set_tick_params(color='white', labelcolor='white')
+
+    # Korvataan sekavat numerot selkeillä 'Vähäinen' ja 'Vilkas' -teksteillä
+    c_min = h_masked.min()
+    c_max = scale_max
+    cb.set_ticks([c_min, c_max])
+    cb.set_ticklabels(['Vähäinen', 'Vilkas'], color='white')
 
     ax.set_xlim(0, real_w)
     ax.set_ylim(real_h, 0)
@@ -425,8 +477,8 @@ def create_etl_funnel(df_funnel):
 
 def create_routes_chart(img, df_route, cm_to_px_func, profiili, real_w, real_h, valitut_id_list):
     """
-    Piirtää tasan ne yksittäiset vierailut, jotka käyttäjä on poiminut käyttöliittymästä.
-    Määritetty charts.py-tiedostoon projektirakenteen mukaisesti.
+    Piirtää yksinkertaiset ja selkeät yksittäiset kulkureitit myymäläkartalle.
+    Sisältää vain käyntireitin, aloituspisteen ja lopetuspisteen ilman monimutkaisia merkintöjä.
     """
     fig, ax = plt.subplots(figsize=(16, 8))
     fig.patch.set_facecolor('#0e1117')
@@ -436,6 +488,8 @@ def create_routes_chart(img, df_route, cm_to_px_func, profiili, real_w, real_h, 
     ax.imshow(img, extent=[0, real_w, real_h, 0], aspect='equal', zorder=0)
 
     if df_route.empty or len(valitut_id_list) == 0:
+        ax.axis('off')
+        plt.tight_layout()
         return fig
 
     # Piirretään vain valitut reitit
@@ -448,13 +502,17 @@ def create_routes_chart(img, df_route, cm_to_px_func, profiili, real_w, real_h, 
         px_x, px_y = cm_to_px_func(df_v['x'].values, df_v['y'].values, profiili, real_w, real_h)
 
         # Tehdään jokaisesta valitusta reitistä hieman eri värinen, jotta ne erottuvat toisistaan
-        line, = ax.plot(px_x, px_y, alpha=0.7, linewidth=2, zorder=1, label=f"Vierailu {vid[:6]}...")
+        line, = ax.plot(px_x, px_y, alpha=0.3, linewidth=1.2, zorder=1, label=f"Asiointi {vid[:6]}...")
+        color = line.get_color()
 
-        # Aloituspiste (Vihreä pallo) käyttää reitin omaa väriä reunassa
-        ax.scatter(px_x[0], px_y[0], color='#4ecc5c', s=60, edgecolors='white', linewidths=0.7, zorder=2)
+        # Piirretään yksittäiset UWB-signaalipisteet pieninä palloina reitillä
+        ax.scatter(px_x, px_y, color=color, s=20, alpha=0.8, zorder=2, edgecolors='none')
+
+        # Aloituspiste (Vihreä pallo)
+        ax.scatter(px_x[0], px_y[0], color='#4ecc5c', s=110, edgecolors='white', linewidths=1.0, zorder=3)
         
         # Lopetuspiste / Kassat (Pinkki neliö)
-        ax.scatter(px_x[-1], px_y[-1], color='#f72585', marker='s', s=60, edgecolors='white', linewidths=0.7, zorder=2)
+        ax.scatter(px_x[-1], px_y[-1], color='#f72585', marker='s', s=110, edgecolors='white', linewidths=1.0, zorder=3)
 
     ax.set_title(f"Valitut asiointireitit ({len(valitut_id_list)} kpl)", color='white', fontsize=12, pad=10, loc='left')
     ax.set_xlim(0, real_w)

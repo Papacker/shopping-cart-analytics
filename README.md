@@ -128,8 +128,8 @@ Sivustolla sinulla on käytettävissä seitsemän välilehteä.
 | **Liikennevirrat** | Käyntimäärät ajan suhteen |
 | **Osastoanalyysi** | Ostoskärryjen viipymä eri osastoilla |
 | **Kärrydynamiikka** | Yksittäisten kärryjen käyttäytyminen |
-| **Heatmap** | Lämpökartta kärryjen liikkeistä pohjakuvalla |
-| **Advanced insights** | Edistyneet analyysit |
+| **Lämpökartat** | Lämpökartta kärryjen liikkeistä pohjakuvalla |
+| **Syvälliset havainnot** | Syvällisemmät analyysit |
 | **Asiakkaalle** | Tekoälyagentin chat-näkymä ja raporttien generointi |
 
 **ETL-putken ajaminen dashboardista:**  
@@ -177,11 +177,11 @@ Agenttitiimissä on viisi erikoistunutta roolia:
 
 | Rooli | Tehtävä |
 |---|---|
-| **Manager** | Koordinoi tiimiä ja raportoi tulokset suomeksi|
-| **Analyst** | SQL-analyysit ja markdown-raporttien kirjoittaminen |
-| **Engineer** | Kaaviot ja heatmapit Python-koodilla |
-| **Liiketoiminta-agentti** | Laskenta ja visualisoinnit, tuloksien tallentaminen erilliseen kansioon |
-| **Kaupan kehittäjä** | Liiketoiminnan konsultointi ja internet-haku |
+| **Kauppa-analyysin johtaja** | Koordinoi tiimiä ja raportoi tulokset suomeksi|
+| **Kauppadatan analyytikko** | SQL-analyysit ja markdown-raporttien kirjoittaminen |
+| **Python-visualisoija** | Kaaviot ja heatmapit Python-koodilla |
+| **Ali Baba** | Laskenta ja visualisoinnit, tuloksien tallentaminen erilliseen kansioon |
+| **Kaupan liiketoiminnan kehittäjä** | Liiketoiminnan konsultointi ja internet-haku |
 
 **Agentilla on keskustelumuisti** — se muistaa aiemmat kysymykset ja pyrkii vastaamaan jatkokysymyksiin aiemman keskustelun huomioiden.
 
@@ -198,7 +198,7 @@ uv run python agentti/crew.py
 Seuraavaksi agentti kysyy tehtävää:
 
 ```
-Mitä tiimin pitäisi tehdä?
+Mita tiimin pitaisi tehda?
 ```
 
 Kirjoita haluamasi kysymys, vastaus tulostuu terminaaliin ja raportti tallentuu tiedostoon: `agentti/workspace/raportti.md`
