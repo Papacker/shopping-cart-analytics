@@ -24,10 +24,10 @@ Esitelkää tiimi ja miten kiertävä Scrum-malli toteutui käytännössä.
 ## Ongelma ja Ratkaisu (Business Case)
 Mitä yritys pyysi ja mitä teitte?
 
-* Toimeksianto: Kauppias on kerännyt dataa ostoskärryjen liikkeistä myymälässä UWB-teknologian avulla, mutta ei ole varma mihin sitä pitäisi käyttää.
-* Ratkaisun tavoite: Datan analysointi ja visualisointi siten, että se auttaa kauppiasta ymmärtämään paremmin ostoskärryjen käyttäjien liikkumista myymälässä ja tekemään parempia päätöksiä liiketoiminnassaan. Tavoitteena on luoda työkalu, joka on helppokäyttöinen ja joka auttaa kauppiasta ymmärtämään asiakkaiden käyttäytymistä myymälässä.
+* Toimeksianto: Kauppias on kerännyt dataa ostoskärryjen liikkeistä myymälässä UWB-teknologian avulla, mutta ei ole varma miten sitä voisi hyödyntää.
+* Ratkaisun tavoite: Datan analysointi ja visualisointi siten, että se auttaa kauppiasta tekemään parempia päätöksiä liiketoiminnassaan. Tavoitteena on luoda työkalu, joka on helppokäyttöinen ja vastaa kauppiaan kysymyksiin datasta.
 * MVP: Mikä on tämänhetkisen prototyypin tärkein ominaisuus?
-Tavoitteen kannalta olennaisen datan visualisointi luonnollisella kielellä esitettyjen kyselyjen perusteella sekä suositukset datan hyödyntämiseksi. 
+Tavoitteen kannalta olennaisen datan visualisointi luonnollisella kielellä esitettyjen kyselyjen perusteella sekä suositukset liiketoiminnan kehittämiseen. 
 
 ## Tekninen Toteutus (Pipeline)
 Miten data liikkui ja mitä sille tapahtui?
@@ -39,28 +39,30 @@ Data-arkkitehtuuri:
     Tiedostoissa oli yhteensä noin 140 miljoonaa riviä, joten raakadatan käsittely olisi ollut erittäin hidasta. Yksi rivi sisälsi ostoskärryn paikannuskoordinaatit ja aikaleiman sekä Q- ja Z-arvon. Z-arvo kertoi paikannussignaalin korkeuden (kerros) ja Q-arvo laadun. Jotta datasta saatiin järkevä analysoitava kokonaisuus, joka vastaisi luotettavasti asiakaskäyttäytymistä, raakadatasta täytyi siivota pois epäoleelliset tiedot sekä mahdolliset virheet, jotta lopputulos olisi luotettava.  
     * Mitä siivottiin? 
     1. Q-arvo ja Z-arvosarakkeet. Z-arvolla ei ollut merkitystä, koska myymälä oli yhdessä kerroksessa. Q-arvon mittaristo ei puolestaan ollut tiedossa. 
-    2. Negatiiviset koordinaatit (x-koordinaatiston 0-linja = kassojen keskilinja, y-koordinaatiston 0 = vasen yläkulma)
-    3. Liikkeet dead zone -alueilla, koska myymälän ulkopuolisella datalla ei ollut liiketoiminnallista arvoa. 
+    2. Negatiiviset koordinaatit (x-akselin 0-linja = kassojen keskilinja, y-koordinaatiston 0 = vasen yläkulma)
+    3. Liikkeet myymälän ulkopuolella ja dead zone -alueilla, koska niillä ei ollut liiketoiminnallista arvoa. 
     4. Hajanaiset signaalit, jotka eivät muodostaneet ostossessiota eli alkaneet sisäänkäynniltä ja päättyneet kassalle.
     5. Aukioloaikojen ulkopuoliset signaalit. 
     6. Liian nopeat siirtymät
     7. Sessiot, jotka jäivät myymälän sisällä alle 50 metrin pituisiksi. 
     
-    Siivouksen jälkeen datasta noin 90 % oli epäoleellista tai virheellistä. Suurin osa epäoleellisesta datasta oli hajanaisia signaaleja, liian lyhyitä sessioita ja kohinaa. 
+    Siivouksen jälkeen datasta noin 93 % oli epäoleellista tai virheellistä. Suurin osa epäoleellisesta datasta oli hajanaisia signaaleja, latauspisteessä vietettyä aikaa, liian lyhyitä sessioita ja kohinaa. 
 
-    * Millä siivottiin? (Esim. Pandas, NumPy, Regex.)
+    * Millä siivottiin?
+    Siivous suoritettiin python-ohjelmointikielellä ja pandas-kirjastolla. Siivottu data tallennettiin parquet-muodossa DuckDB-tietokantaan.
 * Datan validointi (Miten varmistimme, ettei validia dataa poistunut?):
     * Rivinmäärien vertailu: Tarkistimme shape-metodilla datamäärän ennen ja jälkeen jokaisen operaation.
     * Tilastollinen vertailu: Vertasimme keskiarvoja ja hajontaa (mean, std) ennen ja jälkeen siivouksen varmistaaksemme, ettei datan jakauma vääristynyt.
     * Logitus: Kirjasimme ylös jokaisen hylätyn rivin syyn (esim. dropped_rows.csv), jotta ne voitiin pistokokein tarkistaa.
     * Audit Trail: Kaikki raakadatasta tunnistetut trajektorit (istunnot) kirjataan joko Visit- (validit) tai Quality-tauluun (invalidit). Suppilokaavio visualisoi tämän prosessin läpinäkyvästi.
     * Yksikkötestit: Kirjoitimme testejä, jotka varmistivat, että tunnetusti validit testisyötteet läpäisevät filtterit.
-* AI-malli: (Mitä mallia tai malleja ja algoritmeja käytettiin ja miksi?)
+* Testausstrategia ja toteutus:
+* AI-arkkitehtuuri: (Mitä mallia tai malleja ja algoritmeja käytettiin ja miksi?)
     * Missä niitä käytettiin
     * Miten validoitiin että hallusinaatiota ei esiinny?
     * Koulutettiinko omia malleja?
     * Käytettiinko jotain frameworkkeja?
-* Teknologiapino: Python, GitLab CI/CD, Pandas, NumPy, Matplotlib, Seaborn,DuckDB, CrewAi, Jupyterlab, Streamlit  
+* Teknologiapino: Python, GitLab CI/CD, Pandas, NumPy, Matplotlib, Seaborn, DuckDB, CrewAI, Jupyter Lab, Streamlit
 
 
 
@@ -118,52 +120,5 @@ GitLab Repositorio
 https://gitlab.dclabra.fi/ttm25sai/projekti1/projektiopinnot-1-datan-hallinta-laitetaan-parastamme
 Oppimispäiväkirjat
 
-© 202X [Tiimin Nimi] | Ammattikorkeakoulu | Insinöörikoulutus
+© 2026 Laitetaan parastamme | Kajaanin Ammattikorkeakoulu | Insinöörikoulutus
 
-# Ohjeita
-
-Mitä, miksi ja miten?
-
-## Mitä se on?
-
-* Demo on konkreettinen esitys ohjelmiston nykytilasta.
-* Se ei ole PowerPoint-esitys, vaan toimivan ohjelmiston näyttämistä aidossa tai sen kaltaisessa ympäristössä.
-
-## Miksi se pidetään? (Välidemo)
-
-* Varhainen palaute: On helpompaa korjata suuntaa nyt kuin kaksi viikkoa ennen julkaisua.
-* Luottamuksen rakentaminen: Asiakas tai sidosryhmät näkevät, että budjetille saadaan vastinetta.
-* Väärinkäsitysten karsiminen: Teksti speksissä ja koodi ruudulla voivat näyttää erilaisilta eri ihmisten silmissä.
-
-## Miten se toteutetaan? (Välidemo)
-
-* Valmistelu: Valitaan tärkeimmät uudet ominaisuudet (User Stories).
-* Livenä näyttäminen: Kehittäjä tai tuoteomistaja (PO) klikkailee sovellusta ja selittää logiikan.
-* Keskustelu: Kerätään huomiot: "Tämä on hyvä, mutta voisiko tuo nappi olla selkeämpi?"
-* Kirjaaminen: Muutostoiveet viedään backlogille.
-
-## Missä tilassa projekti on tässä vaiheessa? (Välidemo)
-
-* Välidemon kohdalla projekti on yleensä "keskeneräinen mutta toimiva".
-* Ydinlogiikka (MVP-taso): Perustoiminnot (kuten sisäänkirjautuminen tai datan haku) yleensä toimivat.
-* Käyttöliittymä: Ulkoasu saattaa olla vielä viimeistelemätön (ns. "karvalakkimalli"), mutta polku alusta loppuun on kuljettavissa.
-* Tekninen velka: Kaikkea ei ole vielä optimoitu, ja virheiden käsittely voi olla puutteellista.
-
-## Miten päästään lopputulokseen? (Välidemo)
-Välidemo toimii ponnahduslautana viimeistelyyn:
-
-* Priorisointi: Demossa tulleet palautteet laitetaan tärkeysjärjestykseen. Kaikkea ei ehkä ehditä tehdä.
-* Bugien metsästys: Keskitytään vakauteen.
-* Viimeistely (Polishing): Hiotaan käyttöliittymää, animaatioita ja suorituskykyä.
-* Hyväksymistestaus (UAT): Käyttäjät testaavat ohjelmiston varmistaakseen, että se täyttää vaatimukset
-
-# Muita huomioita
-
-- Pyrkikää ammattimaiseen otteeseen.
-- Demoissa voi ja usein onkin mukana ulkopuolisia.
-- Erittäin usein demot ovat arvioitavia kohteita.
-- Jokaisen tiimijäsenen tulisi ainakin kerran puhua demon aikana.
-- Huomioikaa demoissa se että tiettyjä dokumentteja tai asioita voidaan pyytää erikseen palautettavan tai että keskitytään tiettyihin asioihin.
-    - Esimerkiksi voi olla välidemo pelkästään arkkitehtuurista
-    - Jos on pyydetty jotain tiettyä - tätä kannattaa esitellä
-- Muistakaa että jos sitä ei ole dokumentoitu - sitä ei ole olemassa.
