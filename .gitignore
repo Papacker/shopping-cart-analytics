@@ -23,3 +23,12 @@ config/__init__.py
 # Testaus
 .coverage
 
+# IDEs
+.vscode/
+.vscode/settings.json
+
+# Streamlit
+.streamlit/
+
+# Config
+config/store_config.py
